@@ -78,6 +78,9 @@ ignore = [
   "S311", # the synthetic corpora are seeded on purpose and are not secrets
 ]
 "src/binfer/cli.py" = ["T201"]
+"src/binfer/synth.py" = [
+  "S311", # the generator is seeded on purpose; its output is test data, not secrets
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["binfer"]

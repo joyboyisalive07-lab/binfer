@@ -61,3 +61,29 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   minimises the second.
 - A ragged window raises instead of truncating: unequal rows mean the caller
   aligned the corpus wrongly, and silence would hide it.
+
+## Phase 2 - synthetic corpora
+
+- The generator lives in `src/binfer/synth.py`, not in `tools/gen_corpus.py` as
+  the original layout sketched. `binfer --self-test` has to work from a pip
+  install and from the frozen executable, and neither ships `tools/`.
+  `tools/gen_corpus.py` stays as a thin writer for inspecting samples by hand.
+- `--self-test` builds its corpora in memory. The tool must never write outside
+  paths the user passed, and a self test that needs a scratch directory would.
+- Six formats, not five: the four timestamp encodings need ground truth of their
+  own, and hiding them inside another format would make a failure ambiguous.
+- Ground truth may list alternative acceptable type names. A two-byte value
+  followed by two constant zero bytes genuinely reads either way, and a test
+  that demands one answer would be testing a coin flip, not the tool.
+- Each format carries its own fixed seed constant rather than deriving one from
+  its key: `hash()` is salted per process and would break reproducibility.
+- Format D is fixed-size on purpose. With variable sizes the head window would
+  stop inside the UTF-16 field and the pointer at 0x38 would fall outside every
+  comparable window, so the pointer relation could never be proved.
+- Format E compresses random bytes: deflate of random input is a genuine
+  deflate stream and stays incompressible, which is what the region stage has to
+  refuse to explain. Its `78 DA` header is legitimately constant and the tool
+  reporting those two bytes is correct, not a false positive.
+- Format B's payload uses a 20-symbol alphabet, giving about 4.3 bits per byte,
+  so a structured payload is not mistaken for a compressed one. The test asserts
+  this explicitly.
