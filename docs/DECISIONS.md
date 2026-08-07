@@ -183,3 +183,31 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   random bytes emits stored blocks, whose overhead is a fixed eleven bytes and
   whose header repeats the uncompressed length verbatim - two exact relations
   that the tool correctly found and that no real compressed payload has.
+
+## Phase 5 - repeated records
+
+- The record size is never guessed. It comes from a count field whose
+  arithmetic the relation stage proved exactly, or from `--record-size`. A blind
+  search over plausible strides is a real technique, but there is no synthetic
+  format that would prove it works, and this project deletes heuristics with no
+  ground truth rather than shipping them. The README says so under what v1.0
+  does not do.
+- Where the records start is inferred, because the arithmetic cannot say it. A
+  count relation reads `value * k + c == file size` and does not reveal whether
+  the `c` bytes sit in front of the records, behind them, or both. Every start
+  that divides the region exactly is tried, and the one whose pooled records
+  have the lowest mean column entropy wins: at the true start every field lands
+  in the same column of every record, and at any other the fields smear.
+- The start search stops at 256 bytes. Records begin after a header and headers
+  are small; searching further would turn the start search into the blind stride
+  search that was just refused, by the back door.
+- A segmentation explaining no field is not reported at all. A record table full
+  of unknowns is exactly the padding the honesty rule forbids.
+- Records from every sample are pooled into one set of rows before typing. In
+  format C the three-bit flag byte cannot be proved from a single window of
+  24 samples, because all eight combinations rarely appear; pooled across
+  roughly 190 records they always do, and the field is correctly reported as
+  `bits8` rather than `u8`.
+- The recursion runs the relation stage inside the record body too, so a
+  checksum covering the record's own bytes is found. Length relations cannot
+  fire there, since every record has the same size and the target never moves.

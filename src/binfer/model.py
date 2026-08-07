@@ -167,6 +167,7 @@ class RecordLayout:
     origin: str
     evidence: Evidence
     fields: tuple[Field, ...] = ()
+    relations: tuple[Relation, ...] = ()
     regions: tuple[Region, ...] = ()
 
 

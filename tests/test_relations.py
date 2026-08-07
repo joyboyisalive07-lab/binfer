@@ -101,7 +101,7 @@ def test_length_and_checksum_relations_are_proved_and_pointers_are_high() -> Non
 def test_a_count_relation_reports_the_record_stride() -> None:
     corpus = build_corpus(format_by_key("C"))
     result = find_relations(corpus, plan_alignment(corpus))
-    assert result.strides == (16,)
+    assert [(hint.stride, hint.subject) for hint in result.record_hints] == [(16, "0x0004 u32le")]
     count = next(r for r in result.relations if r.kind is RelationKind.COUNT)
     assert "16-byte records" in count.summary
 

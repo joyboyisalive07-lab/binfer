@@ -168,12 +168,20 @@ class Candidate:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordHint:
+    """A record size proved by a count field, and the field that proved it."""
+
+    stride: int
+    subject: str
+
+
+@dataclass(frozen=True, slots=True)
 class RelationResult:
     """Everything the relation stage concluded."""
 
     relations: tuple[Relation, ...] = ()
     notes: tuple[str, ...] = ()
-    strides: tuple[int, ...] = ()
+    record_hints: tuple[RecordHint, ...] = ()
 
 
 def _decode(data: bytes, start: int, size: int, endian: Endian) -> int:
@@ -301,7 +309,7 @@ def _length_summary(stride: int, constant: int) -> str:
 def find_length_relations(
     corpus: Corpus,
     candidates: Sequence[Candidate],
-) -> tuple[tuple[Relation, ...], tuple[int, ...]]:
+) -> tuple[tuple[Relation, ...], tuple[RecordHint, ...]]:
     """Find fields whose value scales exactly to the file size."""
     sizes = list(corpus.sizes)
     total = corpus.count
@@ -312,7 +320,7 @@ def find_length_relations(
             fitted.append((candidate, *fit))
 
     relations: list[Relation] = []
-    strides: list[int] = []
+    hints: list[RecordHint] = []
     kept: list[Candidate] = []
     for candidate, stride, constant in sorted(fitted, key=lambda item: _preference(item[0])):
         if any(_overlaps(other, candidate) for other in kept):
@@ -321,7 +329,8 @@ def find_length_relations(
             # same thing three times.
             continue
         kept.append(candidate)
-        strides.append(stride)
+        if stride > 1:
+            hints.append(RecordHint(stride=stride, subject=candidate.subject()))
         relations.append(
             Relation(
                 kind=RelationKind.LENGTH if stride == 1 else RelationKind.COUNT,
@@ -336,7 +345,7 @@ def find_length_relations(
                 evidence=Evidence("holds exactly", total, total),
             )
         )
-    return tuple(relations), tuple(sorted(set(strides) - {1}))
+    return tuple(relations), tuple(hints)
 
 
 def _string_starts_at(data: bytes, position: int) -> bool:
@@ -459,11 +468,11 @@ def _match_checksum(
 def find_relations(corpus: Corpus, alignment: Alignment) -> RelationResult:
     """Run every relation search and return the findings in a fixed order."""
     candidates = span_candidates(corpus, alignment)
-    lengths, strides = find_length_relations(corpus, candidates)
+    lengths, hints = find_length_relations(corpus, candidates)
     offsets = find_offset_relations(corpus, candidates)
     checksums, notes = find_checksum_relations(corpus, candidates)
 
     relations = tuple(
         sorted((*lengths, *offsets, *checksums), key=lambda relation: relation.sort_key)
     )
-    return RelationResult(relations=relations, notes=notes, strides=strides)
+    return RelationResult(relations=relations, notes=notes, record_hints=hints)
