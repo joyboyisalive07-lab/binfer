@@ -84,6 +84,62 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   deflate stream and stays incompressible, which is what the region stage has to
   refuse to explain. Its `78 DA` header is legitimately constant and the tool
   reporting those two bytes is correct, not a false positive.
-- Format B's payload uses a 20-symbol alphabet, giving about 4.3 bits per byte,
-  so a structured payload is not mistaken for a compressed one. The test asserts
-  this explicitly.
+- Format B's payload uses a 24-symbol alphabet above the ASCII range, giving
+  about 4.6 bits per byte: neither compressible enough to read as a blob nor
+  printable enough to read as text, so it stays genuinely unexplainable.
+
+## Phase 3 - field typing
+
+- A seventh format was added, the numeric zoo. Signed, big-endian and 64-bit
+  readings are all required by the specification and nothing else in the corpus
+  exercised them, so by the project's own rule they would have had to be
+  deleted instead.
+- Format C's record gained a real three-bit flag byte in place of a zero pad,
+  because the bitfield detector otherwise had no ground truth either.
+- An integer reading is emitted only with positive evidence: constant zero high
+  bytes, a high byte that never approaches 0xFF, byte entropy falling towards
+  the significant end, or a high byte confined to the neighbourhoods of 0x00 and
+  0xFF. Four uniformly random bytes decode as a u32 just fine, so without this
+  the field table fills with invented integers wherever the data is opaque.
+- The support floor is 0.45, which corresponds to a high byte never exceeding
+  0x8C. Twenty-four uniformly random samples clear that about twice in 10^7.
+- Constant printable runs of four bytes or more are hard anchors that nothing
+  may straddle. Without them a spurious big-endian timestamp landing across a
+  magic shifted every field in the file.
+- Constant all-zero runs of four bytes or more are padding anchors for numerics
+  only, and an integer may still claim the first byte as its high byte. Strings
+  are exempt because the NUL tail of a fixed-width string is the same pattern.
+- Multi-byte fields are assumed to be aligned to their own width, worth 0.15 of
+  the score. Readings that start mid-field are the commonest false positive of a
+  dense offset scan, and this is the cheapest signal that separates them.
+- Scores within 0.05 count as a tie, broken towards the hypothesis covering more
+  bytes: a rule explaining thirty-two bytes is a better account than one
+  explaining two. This is what lets a UTF-16 field beat the u16 sitting on its
+  first two bytes.
+- A timestamp outranks every other reading, because all samples landing in one
+  fifty-year window is the most specific claim the stage can make. It is
+  suppressed on spans that are entirely printable-or-NUL, since four lowercase
+  letters decode to 2021-2035, and on spans carrying two or more constant
+  non-zero bytes, since a zlib header reads as a plausible clock in every sample.
+- Where a span reads as both a float and a timestamp, the float wins: a float32
+  holding 0..100 also decodes as a unix32 in 2002-2005, and the float test
+  (finite, narrow exponent band, plausible magnitude) is the more constrained.
+- Floats must fall between 1e-9 and 1e15 in magnitude. Bytes belonging to some
+  other field routinely decode as 1e-305 or 1e+274, and nothing a program stores
+  in a file looks like that.
+- An enum value seen exactly once is an outlier, not a member of a closed set.
+  Without that rule a corpus holding two odd files turns every column into an
+  enum of "the usual value plus whatever those files carry".
+- Bitfields need at least three varying bits with every combination observed.
+  Two bits say nothing a four-valued enum does not already say, and the high
+  byte of a big-endian u16 looks exactly like a two-bit field.
+- Booleans are not a separate type. A two-valued enum prints its value set, so
+  `enum8 {0, 1}` already says everything `bool8` would, and one fewer heuristic
+  needs ground truth.
+- All typing findings hold in 100% of samples and are therefore `high` by the
+  README's definition. Only strings can be partial, at 80% or more, and those
+  are the sole source of `low` in this stage.
+- Known gap for the region stage: in format E the first few bytes of the deflate
+  stream are genuinely structured - the `78 DA` header is constant and the block
+  header bytes are low-variance - so the typing stage reports them. Suppressing
+  findings inside a high-entropy region belongs to the region stage, not here.

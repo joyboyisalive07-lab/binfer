@@ -22,6 +22,7 @@ from binfer.synth import (
     FORMAT_B_HEADER_SIZE,
     FORMAT_B_MAGIC,
     FORMAT_B_TRAILER_SIZE,
+    FORMAT_C_FLAG_BITS,
     FORMAT_C_HEADER_SIZE,
     FORMAT_C_MAGIC,
     FORMAT_C_RECORD_MAGIC,
@@ -143,10 +144,10 @@ def test_format_c_records_carry_the_declared_layout() -> None:
         count = struct.unpack_from("<I", data, 4)[0]
         for index in range(count):
             start = FORMAT_C_HEADER_SIZE + index * FORMAT_C_RECORD_SIZE
-            ident, kind, pad, weight, value, tag = struct.unpack_from("<IBBHf4s", data, start)
+            ident, kind, flags, weight, value, tag = struct.unpack_from("<IBBHf4s", data, start)
             assert 0 < ident < 1 << 24
             assert kind in {1, 2, 3}
-            assert pad == 0
+            assert flags < 1 << FORMAT_C_FLAG_BITS
             assert 0 <= weight < 1000
             assert 0.0 <= value <= 100.0
             assert tag == FORMAT_C_RECORD_MAGIC

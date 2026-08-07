@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from binfer.corpus import Corpus, Sample
 from binfer.model import RelationKind
+from binfer.types import FILETIME_EPOCH_OFFSET, HUNDRED_NS_PER_SECOND, TICKS_EPOCH_OFFSET
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -34,13 +35,6 @@ SAMPLES_PER_FORMAT = 24
 # this window, well inside the 1990..2040 band the timestamp detector accepts.
 UNIX_2019 = 1_546_300_800
 UNIX_2026 = 1_767_225_600
-
-# Seconds between the FILETIME epoch (1601-01-01) and the unix epoch.
-FILETIME_EPOCH_OFFSET = 11_644_473_600
-# Seconds between the .NET DateTime epoch (0001-01-01) and the unix epoch.
-TICKS_EPOCH_OFFSET = 62_135_596_800
-# Both encodings count 100-nanosecond intervals.
-HUNDRED_NS_PER_SECOND = 10_000_000
 
 WORDS = (
     "alpha",
@@ -132,7 +126,10 @@ FORMAT_B_MAGIC = b"BLOB"
 FORMAT_B_VERSION = 1
 FORMAT_B_HEADER_SIZE = 16
 FORMAT_B_TRAILER_SIZE = 4
-FORMAT_B_ALPHABET = b"0123456789ABCDEF-_=."
+# A 24-symbol alphabet above the ASCII range: about 4.6 bits per byte, so the
+# payload is neither compressible enough to read as a blob nor printable enough
+# to read as text. It has to stay genuinely unexplainable.
+FORMAT_B_ALPHABET = bytes(range(0x80, 0x98))
 
 
 def _build_b(rng: random.Random, _index: int) -> bytes:
@@ -155,6 +152,7 @@ FORMAT_C_MAGIC = b"CTBL"
 FORMAT_C_RECORD_MAGIC = b"RCD!"
 FORMAT_C_HEADER_SIZE = 16
 FORMAT_C_RECORD_SIZE = 16
+FORMAT_C_FLAG_BITS = 3
 
 
 def _build_c_record(rng: random.Random) -> bytes:
@@ -162,7 +160,7 @@ def _build_c_record(rng: random.Random) -> bytes:
         "<IBBHf4s",
         rng.randrange(1, 1 << 24),
         rng.choice((1, 2, 3)),
-        0,
+        rng.getrandbits(FORMAT_C_FLAG_BITS),
         rng.randrange(0, 1000),
         rng.uniform(0.0, 100.0),
         FORMAT_C_RECORD_MAGIC,
@@ -243,6 +241,24 @@ def _build_f(rng: random.Random, index: int) -> bytes:
     return _padded(header, FORMAT_F_SIZE)
 
 
+FORMAT_G_MAGIC = b"GNUM"
+FORMAT_G_SIZE = 40
+
+
+def _build_g(rng: random.Random, index: int) -> bytes:
+    return b"".join(
+        (
+            struct.pack("<4sh", FORMAT_G_MAGIC, rng.randrange(-1000, 1001)),
+            struct.pack(">H", rng.randrange(0, 1001)),
+            struct.pack("<i", rng.randrange(-2_000_000, 2_000_001)),
+            struct.pack(">I", rng.randrange(0, 2_000_000_000)),
+            struct.pack("<Qd", rng.randrange(1 << 40, 1 << 44), rng.uniform(-1000.0, 1000.0)),
+            struct.pack(">f", rng.uniform(-100.0, 100.0)),
+            struct.pack("<I", index * 65_537 + rng.randrange(1, 4096)),
+        )
+    )
+
+
 FORMATS: tuple[SyntheticFormat, ...] = (
     SyntheticFormat(
         key="A",
@@ -297,7 +313,8 @@ FORMATS: tuple[SyntheticFormat, ...] = (
         record_size=FORMAT_C_RECORD_SIZE,
         record_fields=(
             TruthField(0x00, 4, "u32le", "record id"),
-            TruthField(0x04, 1, "enum8", "record kind, three values", ("u8", "bits8")),
+            TruthField(0x04, 1, "enum8", "record kind, three values", ("u8",)),
+            TruthField(0x05, 1, "bits8", "three flag bits", ("enum8", "u8")),
             TruthField(0x06, 2, "u16le", "weight in 0..999"),
             TruthField(0x08, 4, "f32le", "value in 0..100"),
             TruthField(0x0C, 4, "magic[4]", "record magic RCD!"),
@@ -356,6 +373,24 @@ FORMATS: tuple[SyntheticFormat, ...] = (
             TruthField(0x20, 4, "u32le", "sequence number"),
         ),
         opaque=("0x24..0x2C is zero padding and carries nothing",),
+    ),
+    SyntheticFormat(
+        key="G",
+        name="numeric-zoo",
+        summary="signed, big-endian and 64-bit numerics that no other format exercises",
+        seed=0x67_0007,
+        builder=_build_g,
+        fields=(
+            TruthField(0x00, 4, "magic[4]", "magic GNUM"),
+            TruthField(0x04, 2, "i16le", "signed 16-bit, both signs present"),
+            TruthField(0x06, 2, "u16be", "big-endian unsigned 16-bit"),
+            TruthField(0x08, 4, "i32le", "signed 32-bit, both signs present"),
+            TruthField(0x0C, 4, "u32be", "big-endian unsigned 32-bit"),
+            TruthField(0x10, 8, "u64le", "unsigned 64-bit"),
+            TruthField(0x18, 8, "f64le", "double in -1000..1000"),
+            TruthField(0x20, 4, "f32be", "big-endian float in -100..100"),
+            TruthField(0x24, 4, "u32le", "sequence number"),
+        ),
     ),
 )
 
