@@ -210,10 +210,27 @@ FORMAT_E_VERSION = 1
 FORMAT_E_METHOD = 8
 FORMAT_E_HEADER_SIZE = 16
 FORMAT_E_COMPRESSION_LEVEL = 9
+# Half the payload is incompressible noise and half is runs, so deflate emits
+# real Huffman blocks whose size is not an affine function of the input length.
+FORMAT_E_RUN_FRACTION = 0.5
 
 
 def _build_e(rng: random.Random, _index: int) -> bytes:
-    raw = rng.randbytes(rng.randrange(1024, 3072))
+    # Deflating pure random bytes emits stored blocks, whose overhead is a fixed
+    # eleven bytes and whose header repeats the uncompressed length verbatim.
+    # Both are exact relations that a real compressed payload does not have, and
+    # the tool would be right to report them. Mixing runs into the payload makes
+    # deflate produce real Huffman blocks instead.
+    chunks: list[bytes] = []
+    target = rng.randrange(1024, 3072)
+    while sum(len(chunk) for chunk in chunks) < target:
+        length = rng.randrange(16, 128)
+        chunks.append(
+            rng.randbytes(length)
+            if rng.random() < FORMAT_E_RUN_FRACTION
+            else bytes([rng.randrange(256)]) * length
+        )
+    raw = b"".join(chunks)[:target]
     blob = zlib.compress(raw, FORMAT_E_COMPRESSION_LEVEL)
     header = struct.pack(
         "<4sHHII", FORMAT_E_MAGIC, FORMAT_E_VERSION, FORMAT_E_METHOD, len(raw), len(blob)

@@ -143,3 +143,43 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   stream are genuinely structured - the `78 DA` header is constant and the block
   header bytes are low-variance - so the typing stage reports them. Suppressing
   findings inside a high-entropy region belongs to the region stage, not here.
+
+## Phase 4 - relations
+
+- The relation scan enumerates spans directly instead of reading the typing
+  stage's fields. A CRC-32 field is four uniform bytes, which the typing stage
+  deliberately refuses to name, so relying on named fields would lose exactly
+  the case this stage exists for.
+- A count is a length relation whose stride is greater than one: the field
+  counts units of `k` bytes. That definition is self-contained, and the fitted
+  `k` is handed to the record stage as the record size, so nothing has to guess
+  it twice.
+- Alignment outranks width when two fitting readings overlap. A pointer at 0x38
+  also reads as an eight-byte big-endian value starting at 0x31 whenever the
+  seven bytes in front of it are zero, and that reading passes every test the
+  real field does. Only its alignment gives it away.
+- Overlapping fits are deduplicated, not merely nested ones. In format C a
+  misaligned `u32be` straddling two fields fitted the same file-size relation as
+  the real length field beside it.
+- A uniform corpus is scanned from the start only. Absolute offsets already
+  reach the end of the file, and scanning from both ends reported the same
+  field twice under two different names.
+- Pointers are `high`, not `proved`. A value landing on a string in every sample
+  is strong, but it is not arithmetic; the README reserves `proved` for
+  checksums and length math.
+- Constant spans are skipped everywhere. A constant "checksum" would match only
+  because nothing ever moved, and a constant value cannot pin down `k`.
+- The checksum search tests one sample first and only then the other twenty
+  three. A hopeless span costs one pass instead of twenty four.
+- Checksum spans are limited to 64 bytes from either end, trailers first, and
+  the whole search has a hashing budget in bytes. When the budget truncates the
+  search the report says how many spans were covered, rather than silently
+  doing less.
+- CRC-16 is implemented here with generated tables and validated against the
+  published check values for ARC, MODBUS, CCITT-FALSE and XMODEM. Being pure
+  Python it is skipped above 256 KiB per sample, and the report says so; zlib
+  still covers CRC-32 and Adler-32 at any size.
+- Format E now compresses a payload of mixed noise and runs. Deflating pure
+  random bytes emits stored blocks, whose overhead is a fixed eleven bytes and
+  whose header repeats the uncompressed length verbatim - two exact relations
+  that the tool correctly found and that no real compressed payload has.
