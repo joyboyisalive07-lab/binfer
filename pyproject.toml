@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "binfer"
+version = "1.0.0"
+description = "Infer the structure of an unknown binary file format from a corpus of samples"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "joyboyisalive07-lab" }]
+keywords = ["binary-analysis", "reverse-engineering", "file-format", "kaitai"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: Software Development :: Disassemblers",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.9", "pyinstaller>=6.11"]
+
+[project.scripts]
+binfer = "binfer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/joyboyisalive07-lab/binfer"
+Issues = "https://github.com/joyboyisalive07-lab/binfer/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tools", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "A005",   # binfer.types and binfer.stats shadow stdlib names; the layout is
+            # fixed by design and absolute imports keep the stdlib reachable
+  "CPY001", # the licence lives in LICENSE, not repeated atop every file
+  "COM812", # trailing-comma rules fight the formatter
+  "ISC001",
+  "D203",   # mutually exclusive with D211
+  "D213",   # mutually exclusive with D212
+  "EM101",  # a custom exception class per message is ceremony at this size
+  "EM102",
+  "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "S101",    # pytest asserts
+  "PLR2004", # expected values in assertions are the point of the test
+  "D100",
+  "D103",
+  "INP001",
+]
+"tools/*" = ["INP001", "T201"]
+"src/binfer/cli.py" = ["T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["binfer"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.format]
+quote-style = "double"
