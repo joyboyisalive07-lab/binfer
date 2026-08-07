@@ -67,11 +67,16 @@ ignore = [
 "tests/*" = [
   "S101",    # pytest asserts
   "PLR2004", # expected values in assertions are the point of the test
+  "S311",    # seeded random is the fixture generator, never a secret
   "D100",
   "D103",
   "INP001",
 ]
-"tools/*" = ["INP001", "T201"]
+"tools/*" = [
+  "INP001",
+  "T201",
+  "S311", # the synthetic corpora are seeded on purpose and are not secrets
+]
 "src/binfer/cli.py" = ["T201"]
 
 [tool.ruff.lint.isort]

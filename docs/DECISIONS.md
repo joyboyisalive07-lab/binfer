@@ -30,3 +30,34 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - MIT copyright year is 2026, the year of first publication.
 - `CPY001` is disabled: the licence text belongs in `LICENSE`, and a header
   repeated in every module is noise that has to be maintained.
+
+## Phase 1 - corpus and column statistics
+
+- The sample directory is not traversed recursively: a corpus is a flat set of
+  files of one format, and pulling in a nested directory silently mixes formats.
+- Files are taken in name order, so `--max-files N` selects the same subset on
+  every run and on every platform.
+- Empty files are skipped with a warning rather than aborting: one truncated
+  download should not block analysis of the other thirty samples.
+- Files above 64 MiB are skipped with a warning. Every stage is linear in file
+  size, and a sample far larger than the rest is nearly always a different thing
+  that happens to share the directory.
+- Head and tail windows are capped at 64 KiB each. Whatever falls between them
+  is reported as unanalysed, never silently dropped.
+- Window budget for varying sizes is `min_size // 2` per side, so the two
+  windows can never overlap even on the shortest sample.
+- A uniform corpus larger than two window budgets keeps `FIXED` mode: offsets
+  stay absolute, only the coverage shrinks.
+- `median_size` uses `median_low`, so the reported median is always a size an
+  actual sample has, not an average of two.
+- Column entropy is normalised against `log2(sample count)`, because a 12-file
+  corpus can never show more than 3.58 bits at one offset and an absolute
+  threshold would classify nothing.
+- Entropy terms are summed in sorted order: float addition is not associative
+  and the report has to be byte-identical between runs.
+- Two separate entropy measures exist and must not be confused - across the
+  corpus at one offset (how much a field varies), and inside one span of one
+  file (whether it looks compressed). A counter maximises the first and
+  minimises the second.
+- A ragged window raises instead of truncating: unequal rows mean the caller
+  aligned the corpus wrongly, and silence would hide it.
