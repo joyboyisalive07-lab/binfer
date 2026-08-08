@@ -47,11 +47,11 @@ VSVersionInfo(
   ),
   kids=[
     StringFileInfo([StringTable('040904B0', [
-      StringStruct('CompanyName', 'joyboyisalive07-lab'),
+      StringStruct('CompanyName', 'JoyBoy'),
       StringStruct('FileDescription', 'binfer - structure inference for unknown binary formats'),
       StringStruct('FileVersion', '$version.0'),
       StringStruct('InternalName', 'binfer'),
-      StringStruct('LegalCopyright', 'MIT License. Copyright (c) 2026 joyboyisalive07-lab'),
+      StringStruct('LegalCopyright', 'MIT License. Copyright (c) 2026 JoyBoy'),
       StringStruct('OriginalFilename', 'binfer.exe'),
       StringStruct('ProductName', 'binfer'),
       StringStruct('ProductVersion', '$version')

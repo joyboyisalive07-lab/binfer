@@ -11,7 +11,7 @@ import pytest
 
 from binfer import __version__, cli
 from binfer.cli import EXIT_ERROR, EXIT_OK, _identifier, main
-from binfer.synth import FORMATS, format_by_key, generate
+from binfer.synth import FORMATS, SAMPLES_PER_FORMAT, format_by_key, generate
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -117,7 +117,7 @@ def test_no_arguments_with_a_keyboard_offers_a_choice(
     monkeypatch.setattr("builtins.input", scripted("q"))
     assert main([]) == EXIT_OK
     printed = capsys.readouterr().out
-    assert "Choose 1, 2 or q" in printed
+    assert "Choose 1, 2, 3 or q" in printed
     assert "drag a folder onto binfer.exe" in printed
     assert "Press Enter to close this window." in printed
 
@@ -177,6 +177,37 @@ def test_the_menu_accepts_a_path_the_way_explorer_quotes_it(
     assert "CORPUS" in capsys.readouterr().out
 
 
+def test_the_menu_can_write_examples_and_analyse_them(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Someone who just downloaded the executable has nothing to point option 2 at."""
+    target = tmp_path / "examples"
+    assert cli.interactive_session(scripted("3", str(target)), colour=False) == EXIT_OK
+    written = sorted(target.glob("sample_*.bin"))
+    assert len(written) == SAMPLES_PER_FORMAT
+    printed = capsys.readouterr().out
+    assert f"Wrote {SAMPLES_PER_FORMAT} files to" in printed
+    assert "CORPUS" in printed
+    assert "records at 0x0010" in printed
+
+
+def test_writing_examples_can_be_declined(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert cli.interactive_session(scripted("3", "q"), colour=False) == EXIT_OK
+    assert not list(tmp_path.iterdir())
+    assert "The example format is" in capsys.readouterr().out
+
+
+def test_writing_examples_reports_a_folder_it_cannot_create(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    blocker = tmp_path / "taken"
+    blocker.write_text("not a folder", encoding="utf-8")
+    assert cli.interactive_session(scripted("3", str(blocker)), colour=False) == EXIT_OK
+    assert "binfer:" in capsys.readouterr().err
+
+
 def test_the_menu_asks_again_after_a_path_that_is_not_a_folder(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -184,14 +215,14 @@ def test_the_menu_asks_again_after_a_path_that_is_not_a_folder(
     reader = scripted("9", "2", str(tmp_path / "nowhere"), str(source))
     assert cli.interactive_session(reader, colour=False) == EXIT_OK
     printed = capsys.readouterr().out
-    assert "Type 1, 2 or q." in printed
+    assert "Type 1, 2, 3 or q." in printed
     assert "is not a folder" in printed
     assert "CORPUS" in printed
 
 
 def test_the_menu_survives_a_closed_input_stream(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.interactive_session(scripted(), colour=False) == EXIT_OK
-    assert "Choose 1, 2 or q" in capsys.readouterr().out
+    assert "Choose 1, 2, 3 or q" in capsys.readouterr().out
 
 
 def test_the_menu_reports_a_corpus_it_cannot_use(

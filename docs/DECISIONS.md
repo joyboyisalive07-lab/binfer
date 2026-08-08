@@ -348,6 +348,18 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
   code-signing certificate, so the next best thing is a download that can be
   checked against a build log that is public.
+## 1.0.4 - something to point option 2 at
+
+- The menu offered to analyse a folder to someone who, having just downloaded a
+  single executable, had no folder to offer it. A third option writes one
+  synthetic corpus to a folder they name and analyses it. It is the same data
+  the self test builds in memory, so its answer is known and it is a fair thing
+  to practise on.
+- The folder is named by the person, so the rule that binfer writes nothing
+  outside paths the caller gave still holds.
+- Author is recorded as JoyBoy in the licence, the package metadata and the
+  executable's version resource.
+
 ## 1.0.3 - asking the right question about who is watching
 
 - The menu keyed off `GetConsoleProcessList` alone, which is a fragile thing to

@@ -14,9 +14,12 @@ one.
 1. Download `binfer.exe` from the
    [latest release](https://github.com/joyboyisalive07-lab/binfer/releases/latest).
    SmartScreen will warn about it; see [below](#a-note-on-windows-defender-and-smartscreen).
-2. **Double-click it.** It asks whether to run the self test or analyse a
-   folder, and waits for you before closing. Press `1` to watch it work on
-   formats whose answers are known, using no files of yours.
+2. **Double-click it.** It offers three things and waits for you before closing:
+   - `1` runs the self test on formats whose answers are known, using no files
+     of yours. This is the fastest way to see it work.
+   - `3` writes two dozen example files to a folder you name and analyses them,
+     so you have something to look at if you have no samples yet.
+   - `2` analyses a folder of your own.
 3. To analyse your own files, put at least four samples of the same unknown
    format in one folder and either type its path into that prompt, drag the
    folder onto `binfer.exe`, or run:

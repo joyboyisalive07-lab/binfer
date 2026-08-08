@@ -22,7 +22,7 @@ from binfer.corpus import CorpusError, load_corpus
 from binfer.model import Confidence
 from binfer.records import MIN_RECORD_SIZE
 from binfer.report import render_json, render_ksy, render_scorecard, render_text
-from binfer.synth import score_all
+from binfer.synth import SAMPLES_PER_FORMAT, format_by_key, generate, score_all
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -195,11 +195,14 @@ structure they share. It needs a folder of samples to look at.
 
   1  run the self test, which needs no files of yours
   2  analyse a folder of samples
+  3  write example sample files somewhere, then analyse them
   q  quit
 
 Tip: you can also drag a folder onto binfer.exe, or run it from PowerShell as
      binfer.exe C:\\path\\to\\samples
 """
+
+EXAMPLE_FORMAT = "C"
 
 
 def _ask(question: str, reader: Callable[[], str]) -> str | None:
@@ -211,6 +214,11 @@ def _ask(question: str, reader: Callable[[], str]) -> str | None:
         return None
 
 
+def _clean_path(answer: str) -> Path:
+    # Explorer and PowerShell both quote a dragged path that contains spaces.
+    return Path(answer.strip('"').strip("'"))
+
+
 def _ask_for_directory(reader: Callable[[], str]) -> Path | None:
     while True:
         answer = _ask("Folder with sample files (or q to go back): ", reader)
@@ -218,11 +226,37 @@ def _ask_for_directory(reader: Callable[[], str]) -> Path | None:
             return None
         if not answer:
             continue
-        # Explorer and PowerShell both quote a dragged path that contains spaces.
-        candidate = Path(answer.strip('"').strip("'"))
+        candidate = _clean_path(answer)
         if candidate.is_dir():
             return candidate
         print(f"  {candidate} is not a folder. Try again.")
+
+
+def _write_examples(reader: Callable[[], str]) -> Path | None:
+    """Write one synthetic corpus to a folder the caller names.
+
+    Someone who has just downloaded the executable has no samples of their own,
+    so option 2 has nothing to point at. These are the same files the self test
+    builds in memory, with a known answer, which makes them a fair thing to
+    practise on.
+    """
+    fmt = format_by_key(EXAMPLE_FORMAT)
+    print(f"\nThe example format is {fmt.name}: {fmt.summary}.")
+    answer = _ask("Folder to write the examples into (or q to go back): ", reader)
+    if answer is None or answer.lower() in {"q", "quit", "exit"} or not answer:
+        return None
+
+    target = _clean_path(answer)
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+        for index, data in enumerate(generate(fmt)):
+            (target / f"sample_{index:03d}.bin").write_bytes(data)
+    except OSError as error:
+        print(f"binfer: {error}", file=sys.stderr)
+        return None
+
+    print(f"Wrote {SAMPLES_PER_FORMAT} files to {target}. Analysing them now.\n")
+    return target
 
 
 def interactive_session(reader: Callable[[], str], *, colour: bool) -> int:
@@ -235,13 +269,13 @@ def interactive_session(reader: Callable[[], str], *, colour: bool) -> int:
     print(f"binfer {__version__} - {DESCRIPTION}")
     print(MENU)
     while True:
-        choice = _ask("Choose 1, 2 or q: ", reader)
+        choice = _ask("Choose 1, 2, 3 or q: ", reader)
         if choice is None or choice.lower() in {"q", "quit", "exit"}:
             return EXIT_OK
         if choice == "1":
             return _run_self_test(colour=colour)
-        if choice == "2":
-            directory = _ask_for_directory(reader)
+        if choice in {"2", "3"}:
+            directory = _ask_for_directory(reader) if choice == "2" else _write_examples(reader)
             if directory is None:
                 return EXIT_OK
             try:
@@ -249,7 +283,7 @@ def interactive_session(reader: Callable[[], str], *, colour: bool) -> int:
             except (CorpusError, OSError) as error:
                 print(f"binfer: {error}", file=sys.stderr)
                 return EXIT_ERROR
-        print("  Type 1, 2 or q.")
+        print("  Type 1, 2, 3 or q.")
 
 
 def main(argv: list[str] | None = None) -> int:
