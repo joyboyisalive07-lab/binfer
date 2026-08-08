@@ -108,6 +108,10 @@ class Field:
     confidence: Confidence
     evidence: Evidence
     runner_up: str | None = None
+    # The bytes themselves, when the field is the same in every sample. Carrying
+    # them beats re-parsing ``value_repr``, and the Kaitai export turns them into
+    # a ``contents`` assertion that actually validates a file.
+    raw: bytes | None = None
 
     @property
     def end(self) -> int:
@@ -134,6 +138,7 @@ class Relation:
     summary: str
     confidence: Confidence
     evidence: Evidence
+    subject_size: int = 0
 
     @property
     def sort_key(self) -> tuple[str, int, str]:
@@ -143,18 +148,25 @@ class Relation:
 
 @dataclass(frozen=True, slots=True)
 class Region:
-    """A span the analysis could not explain, named as such."""
+    """A span the analysis could not explain, named as such.
+
+    Offsets follow the same convention as relation subjects: a non-negative
+    value counts from the start of the file, a negative one counts back from the
+    end, and an ``end`` of zero means the end of the file. A corpus of varying
+    sizes has no single absolute offset for its trailer, and pretending
+    otherwise would put a wrong number in the report.
+    """
 
     start: int
     end: int
     kind: RegionKind
     entropy: float
-    note: str
+    note: str = ""
 
     @property
-    def size(self) -> int:
-        """Return the length of the span in bytes."""
-        return self.end - self.start
+    def order(self) -> tuple[int, int]:
+        """Return the position of this region in file order."""
+        return (0, self.start) if self.start >= 0 else (1, self.start)
 
 
 @dataclass(frozen=True, slots=True)

@@ -361,10 +361,10 @@ def _integer_hypothesis(
 
     support, reason = max(
         (
-            (pad_score, f"top {zero_pad} byte(s) constant zero"),
-            (headroom, f"high byte never above 0x{msb_max:02X}"),
-            (gradient, "byte entropy falls towards the high end"),
-            (sign_support, "high byte only near 0x00 and 0xFF"),
+            (pad_score, f"top {zero_pad} byte(s) zero"),
+            (headroom, f"high byte <= 0x{msb_max:02X}"),
+            (gradient, "entropy falls to high end"),
+            (sign_support, "high byte near 0x00/0xFF"),
         ),
         key=lambda item: item[0],
     )
@@ -450,7 +450,7 @@ def _float_hypothesis(
         score=_blend(FLOAT_SCORE, aligned=offset % size == 0),
         confidence=Confidence.HIGH,
         value_repr=f"{min(values):.6g}..{max(values):.6g}",
-        evidence=window.evidence(f"finite, exponent band {spread} wide"),
+        evidence=window.evidence(f"exponent band {spread} wide"),
     )
 
 
@@ -578,7 +578,7 @@ def _bitfield_hypothesis(column: ColumnStats) -> Hypothesis | None:
         score=_blend(BITFIELD_SCORE, aligned=True),
         confidence=Confidence.HIGH,
         value_repr=f"bits {positions}",
-        evidence=Evidence(f"all {1 << bits} combinations of {bits} bits seen", total, total),
+        evidence=Evidence(f"all {1 << bits} bit patterns seen", total, total),
     )
 
 
@@ -853,6 +853,7 @@ def _constant_fields(window: _Window, covered: Sequence[bool]) -> list[Field]:
                     value_repr=repr(data.decode("ascii")) if printable else data.hex(" "),
                     confidence=Confidence.HIGH,
                     evidence=window.evidence("identical"),
+                    raw=data,
                 )
             )
     return fields

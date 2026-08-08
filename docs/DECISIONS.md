@@ -211,3 +211,41 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - The recursion runs the relation stage inside the record body too, so a
   checksum covering the record's own bytes is found. Length relations cannot
   fire there, since every record has the same size and the target never moves.
+
+## Phase 6 - assembly and rendering
+
+- Assembly lives in `src/binfer/analyze.py`, a second deviation from the
+  original layout. `report.py` renders and must not conclude; `cli.py` must not
+  carry analysis; the pipeline has to live somewhere and this is it.
+- Offsets carry an anchor by sign: non-negative counts from the start, negative
+  counts back from the end, and an end of zero means the end of the file. A
+  corpus of varying sizes has no single absolute offset for its trailer, and
+  printing one would be a wrong number rather than a missing one.
+- Every proved relation subject gets a row in the field table. A CRC-32 field is
+  four uniform bytes that the typing stage refuses to name, so without this the
+  strongest finding in the file would appear only under RELATIONS and the layout
+  would show a hole where it sits.
+- High-entropy spans absorb the short findings pressed against them. The first
+  bytes of a deflate stream are genuinely structured - the `78 DA` header never
+  moves and the block header is low-variance - so the typing stage reports them
+  correctly and the region stage has to overrule it. The walk stops at a magic
+  run, at any field a relation proved, and at anything wider than eight bytes.
+  This closes the gap left open in phase 3.
+- When the whole trailer window measures as compressed, every field found inside
+  it is dropped rather than absorbed one at a time. Anything typed inside a
+  deflate stream is a regularity of the compressor, not a field of the format.
+- Entropy is now compared against the most a span of that length could show,
+  not against a fixed 7.2 bits. The plug-in estimator is biased downwards on
+  short spans - 256 uniformly random bytes measure about 7.5 bits, not 8 - and
+  the fixed threshold made a 232-byte deflate span look like structure.
+- A record array runs to the end of the file, so when one is found the head and
+  tail windows stop contributing fields beyond its start. Otherwise the last two
+  records appeared a second time as EOF-anchored fields.
+- The runner-up is printed in the type column as `winner / runner-up`, because
+  the evidence count is the one thing the report may never drop and it has to
+  fit on the same line.
+- The Kaitai export is a draft and says so. Constant fields become `contents`
+  assertions that actually validate a file, holes become explicit `unknown_*`
+  attributes, a record array becomes a repeated type, and a trailer anchored to
+  the end of the file becomes an open-ended span with a note, since Kaitai
+  cannot express it without a size expression the corpus does not supply.

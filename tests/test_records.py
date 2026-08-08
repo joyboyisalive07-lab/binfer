@@ -57,7 +57,7 @@ def test_the_record_body_matches_its_declared_layout() -> None:
 def test_pooling_records_exposes_a_bitfield_that_one_window_could_not_prove() -> None:
     flags = next(field for field in records_of("C")[0].fields if field.offset == 0x05)
     assert flags.type_name == "bits8"
-    assert "8 combinations" in flags.evidence.claim
+    assert flags.evidence.claim == "all 8 bit patterns seen"
 
 
 def test_no_records_are_reported_for_formats_without_a_count_field() -> None:
@@ -124,7 +124,7 @@ def test_a_checksum_inside_a_record_is_found_by_the_recursion() -> None:
     layouts = find_records(corpus_of(blobs), (), record_size=8)
     assert len(layouts) == 1
     assert [(r.subject, r.summary) for r in layouts[0].relations] == [
-        ("0x0006 u8", "sum of everything before the field")
+        ("0x0006 u8", "sum over the bytes before it")
     ]
 
 

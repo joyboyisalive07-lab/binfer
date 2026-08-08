@@ -103,7 +103,7 @@ def test_a_count_relation_reports_the_record_stride() -> None:
     result = find_relations(corpus, plan_alignment(corpus))
     assert [(hint.stride, hint.subject) for hint in result.record_hints] == [(16, "0x0004 u32le")]
     count = next(r for r in result.relations if r.kind is RelationKind.COUNT)
-    assert "16-byte records" in count.summary
+    assert "16 B records" in count.summary
 
 
 def test_random_files_of_equal_size_yield_no_relations() -> None:
@@ -125,7 +125,7 @@ def test_a_trailing_crc16_is_found_and_named() -> None:
         blobs.append(body + struct.pack("<H", crc16_forward(body, 0xFFFF)))
     found = analyse(blobs).relations
     assert [(r.kind, r.subject, r.summary) for r in found] == [
-        (RelationKind.CHECKSUM, "0x000A u16le", "crc16-ccitt of everything before the field")
+        (RelationKind.CHECKSUM, "0x000A u16le", "crc16-ccitt over the bytes before it")
     ]
 
 
@@ -136,9 +136,7 @@ def test_a_header_sum_over_the_body_is_found() -> None:
         body = rng.randbytes(40)
         blobs.append(b"SUM!" + bytes([sum(body) & 0xFF]) + b"\x00\x00\x00" + body)
     found = analyse(blobs).relations
-    assert [(r.subject, r.summary) for r in found] == [
-        ("0x0004 u8", "sum of from the field to EOF")
-    ]
+    assert [(r.subject, r.summary) for r in found] == [("0x0004 u8", "sum over the bytes after it")]
 
 
 def test_the_same_field_is_not_reported_twice_under_overlapping_readings() -> None:

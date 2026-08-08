@@ -137,10 +137,10 @@ ALGORITHMS: tuple[Algorithm, ...] = (
 )
 
 RANGES: tuple[tuple[str, Callable[[bytes, int, int], bytes]], ...] = (
-    ("everything before the field", lambda data, start, _end: data[:start]),
-    ("from the field to EOF", lambda data, _start, end: data[end:]),
+    ("the bytes before it", lambda data, start, _end: data[:start]),
+    ("the bytes after it", lambda data, _start, end: data[end:]),
     (
-        "the whole file except the field",
+        "the file minus itself",
         lambda data, start, end: data[:start] + data[end:],
     ),
 )
@@ -300,10 +300,10 @@ def fit_linear(values: Sequence[int], targets: Sequence[int]) -> tuple[int, int]
 
 
 def _length_summary(stride: int, constant: int) -> str:
-    scaled = "value" if stride == 1 else f"value * {stride}"
+    scaled = "value" if stride == 1 else f"value*{stride}"
     if constant == 0:
-        return f"{scaled} == file size"
-    return f"{scaled} + {constant} == file size"
+        return f"{scaled} == size"
+    return f"{scaled} + {constant} == size"
 
 
 def find_length_relations(
@@ -336,10 +336,11 @@ def find_length_relations(
                 kind=RelationKind.LENGTH if stride == 1 else RelationKind.COUNT,
                 subject_offset=candidate.anchor,
                 subject=candidate.subject(),
+                subject_size=candidate.size,
                 summary=(
                     _length_summary(stride, constant)
                     if stride == 1
-                    else f"{_length_summary(stride, constant)}, so {stride}-byte records"
+                    else f"{_length_summary(stride, constant)}, {stride} B records"
                 ),
                 confidence=Confidence.PROVED,
                 evidence=Evidence("holds exactly", total, total),
@@ -377,7 +378,8 @@ def find_offset_relations(
                 kind=RelationKind.OFFSET,
                 subject_offset=candidate.anchor,
                 subject=candidate.subject(),
-                summary="points at a NUL-terminated ASCII string",
+                subject_size=candidate.size,
+                summary="points at a NUL-terminated string",
                 confidence=Confidence.HIGH,
                 evidence=Evidence("lands on a string", total, total),
             )
@@ -429,7 +431,8 @@ def find_checksum_relations(
                 kind=RelationKind.CHECKSUM,
                 subject_offset=candidate.anchor,
                 subject=candidate.subject(),
-                summary=f"{algorithm} of {range_name}",
+                subject_size=candidate.size,
+                summary=f"{algorithm} over {range_name}",
                 confidence=Confidence.PROVED,
                 evidence=Evidence("matches", total, total),
             )

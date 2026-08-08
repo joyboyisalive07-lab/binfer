@@ -32,15 +32,16 @@ BYTE_VALUES = 256
 # sizes this tool targets.
 HIGH_ENTROPY_RATIO = 0.95
 
-# Deflate output and encrypted payloads sit above 7.5 bits per byte in practice;
-# text, records and pointer tables stay below 6. The gap is wide enough that one
-# threshold works without per-format tuning.
-BLOB_ENTROPY_BITS = 7.2
+# Measured against the most a span of that length could show, because the
+# plug-in estimator is biased downwards on short spans: 256 uniformly random
+# bytes measure about 7.5 bits, not 8. Deflate output and encrypted payloads
+# land above 0.85 of the ceiling, while text, records and pointer tables stay
+# below 0.6, so one ratio works without per-format tuning.
+BLOB_ENTROPY_RATIO = 0.82
 
-# Below this length the per-byte entropy of a span is bounded by log2(n) and the
-# plug-in estimator is badly biased downwards, so the measurement says nothing
-# about compressibility.
-MIN_BLOB_BYTES = 256
+# Below this length the measurement says nothing: the ceiling is log2(n) and the
+# bias swamps the signal.
+MIN_BLOB_BYTES = 128
 
 
 class ColumnClass(enum.Enum):
@@ -133,11 +134,19 @@ def mean_byte_entropy(chunks: Sequence[bytes]) -> float:
     return statistics.fmean(byte_entropy(chunk) for chunk in chunks)
 
 
+def entropy_ratio(chunks: Sequence[bytes]) -> float:
+    """Return the mean per-byte entropy as a fraction of what the length allows."""
+    if not chunks:
+        return 0.0
+    ceiling = math.log2(min(*(len(chunk) for chunk in chunks), BYTE_VALUES))
+    return mean_byte_entropy(chunks) / ceiling if ceiling > 0 else 0.0
+
+
 def is_high_entropy_span(chunks: Sequence[bytes]) -> bool:
     """Return whether the same span in every sample looks compressed or encrypted."""
     if not chunks or any(len(chunk) < MIN_BLOB_BYTES for chunk in chunks):
         return False
-    return mean_byte_entropy(chunks) >= BLOB_ENTROPY_BITS
+    return entropy_ratio(chunks) >= BLOB_ENTROPY_RATIO
 
 
 def column_stats(window: Sequence[bytes], *, base_offset: int = 0) -> tuple[ColumnStats, ...]:
