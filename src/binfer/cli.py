@@ -12,7 +12,9 @@ import contextlib
 import os
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from binfer import __version__
 from binfer.analyze import Options, analyze
@@ -21,6 +23,9 @@ from binfer.model import Confidence
 from binfer.records import MIN_RECORD_SIZE
 from binfer.report import render_json, render_ksy, render_scorecard, render_text
 from binfer.synth import score_all
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -129,21 +134,105 @@ def _run_self_test(*, colour: bool) -> int:
     return EXIT_OK if all(card.passed for card in cards) else EXIT_ERROR
 
 
-def _run_analysis(args: argparse.Namespace, *, colour: bool) -> int:
-    corpus = load_corpus(args.directory, max_files=args.max_files)
-    report = analyze(
-        corpus,
-        Options(
-            record_size=args.record_size,
-            min_confidence=Confidence.from_label(args.min_confidence),
-        ),
-    )
+@dataclass(frozen=True, slots=True)
+class _Job:
+    """One analysis and whatever the caller asked to be written out."""
+
+    directory: Path
+    options: Options = field(default_factory=Options)
+    max_files: int | None = None
+    json_path: Path | None = None
+    ksy_path: Path | None = None
+
+
+def _analyse(job: _Job, *, colour: bool) -> int:
+    corpus = load_corpus(job.directory, max_files=job.max_files)
+    report = analyze(corpus, job.options)
     print(render_text(report, colour=colour), end="")
-    if args.json:
-        _write(args.json, render_json(report))
-    if args.ksy:
-        _write(args.ksy, render_ksy(report, _identifier(args.directory.name)))
+    if job.json_path:
+        _write(job.json_path, render_json(report))
+    if job.ksy_path:
+        _write(job.ksy_path, render_ksy(report, _identifier(job.directory.name)))
     return EXIT_OK
+
+
+def _run_analysis(args: argparse.Namespace, *, colour: bool) -> int:
+    return _analyse(
+        _Job(
+            directory=args.directory,
+            options=Options(
+                record_size=args.record_size,
+                min_confidence=Confidence.from_label(args.min_confidence),
+            ),
+            max_files=args.max_files,
+            json_path=args.json,
+            ksy_path=args.ksy,
+        ),
+        colour=colour,
+    )
+
+
+MENU = """
+binfer compares several files of the same unknown binary format and reports the
+structure they share. It needs a folder of samples to look at.
+
+  1  run the self test, which needs no files of yours
+  2  analyse a folder of samples
+  q  quit
+
+Tip: you can also drag a folder onto binfer.exe, or run it from PowerShell as
+     binfer.exe C:\\path\\to\\samples
+"""
+
+
+def _ask(question: str, reader: Callable[[], str]) -> str | None:
+    print(question, end="", flush=True)
+    try:
+        return reader().strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+
+
+def _ask_for_directory(reader: Callable[[], str]) -> Path | None:
+    while True:
+        answer = _ask("Folder with sample files (or q to go back): ", reader)
+        if answer is None or answer.lower() in {"q", "quit", "exit"}:
+            return None
+        if not answer:
+            continue
+        # Explorer and PowerShell both quote a dragged path that contains spaces.
+        candidate = Path(answer.strip('"').strip("'"))
+        if candidate.is_dir():
+            return candidate
+        print(f"  {candidate} is not a folder. Try again.")
+
+
+def interactive_session(reader: Callable[[], str], *, colour: bool) -> int:
+    """Offer the two things a double-clicked executable can usefully do.
+
+    Reached only when the program was started with no arguments by Explorer,
+    where printing usage and exiting leaves someone with a window that closes
+    itself and a tool that never ran.
+    """
+    print(f"binfer {__version__} - {DESCRIPTION}")
+    print(MENU)
+    while True:
+        choice = _ask("Choose 1, 2 or q: ", reader)
+        if choice is None or choice.lower() in {"q", "quit", "exit"}:
+            return EXIT_OK
+        if choice == "1":
+            return _run_self_test(colour=colour)
+        if choice == "2":
+            directory = _ask_for_directory(reader)
+            if directory is None:
+                return EXIT_OK
+            try:
+                return _analyse(_Job(directory=directory), colour=colour)
+            except (CorpusError, OSError) as error:
+                print(f"binfer: {error}", file=sys.stderr)
+                return EXIT_ERROR
+        print("  Type 1, 2 or q.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -151,13 +240,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     requested = sys.argv[1:] if argv is None else argv
     if not requested:
-        # Asking for nothing is not a usage error. Someone has double-clicked a
-        # downloaded executable, and an argparse complaint in a window that
-        # closes itself tells them nothing.
+        # Asking for nothing is not a usage error. Started from Explorer there
+        # is a person watching, so ask them what to do; started from a shell,
+        # print the help and let them type the next command.
+        if launched_from_explorer():
+            code = interactive_session(input, colour=_wants_colour(sys.stdout, disabled=False))
+            _wait_for_reader()
+            return code
         parser.print_help()
         print(GETTING_STARTED, end="")
-        if launched_from_explorer():
-            _wait_for_reader()
         return EXIT_OK
 
     args = parser.parse_args(requested)

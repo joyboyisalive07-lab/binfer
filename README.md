@@ -93,14 +93,17 @@ What you can do instead:
 
 ### Running it
 
-binfer is a command-line tool. Double-clicking it opens a console, prints the
-help and waits for a keypress, which is all it can usefully do without a
-directory to look at. Open PowerShell in the folder you put it in and give it
-one:
+Three ways, all equivalent:
+
+- **Double-click it.** With no arguments it asks whether to run the self test or
+  to analyse a folder, and waits for you before closing the window.
+- **Drag a folder of samples onto `binfer.exe`.** That is the same as passing
+  the folder on the command line.
+- **From PowerShell**, which is what you want for the options:
 
 ```powershell
 .\binfer.exe --self-test
-.\binfer.exe C:\path\to\samples
+.\binfer.exe C:\path\to\samples --json findings.json
 ```
 
 ## Usage

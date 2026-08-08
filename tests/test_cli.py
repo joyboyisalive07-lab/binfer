@@ -13,6 +13,7 @@ from binfer.cli import EXIT_ERROR, EXIT_OK, _identifier, main
 from binfer.synth import FORMATS, format_by_key, generate
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 USAGE_EXIT = 2
@@ -91,14 +92,79 @@ def test_a_corpus_that_is_too_small_reports_the_reason_and_fails(
     assert "at least 4" in capsys.readouterr().err
 
 
-def test_no_arguments_shows_help_and_how_to_start(capsys: pytest.CaptureFixture[str]) -> None:
-    """A double-clicked executable must not answer with an argparse complaint."""
+def scripted(*answers: str) -> Callable[[], str]:
+    """Replay the given answers in place of input(), then report end of input."""
+    queue = list(answers)
+    return lambda: queue.pop(0) if queue else (_ for _ in ()).throw(EOFError)
+
+
+def test_no_arguments_from_a_shell_shows_help_and_how_to_start(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
     assert main([]) == EXIT_OK
     printed = capsys.readouterr().out
     assert "usage: binfer" in printed
     assert "binfer --self-test" in printed
-    assert "at least four files" in printed
     assert "error:" not in printed
+
+
+def test_a_double_click_offers_a_choice_instead_of_usage_text(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: True)
+    monkeypatch.setattr("builtins.input", scripted("q"))
+    assert main([]) == EXIT_OK
+    printed = capsys.readouterr().out
+    assert "Choose 1, 2 or q" in printed
+    assert "drag a folder onto binfer.exe" in printed
+    assert "Press Enter to close this window." in printed
+
+
+def test_the_menu_can_run_the_self_test(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.interactive_session(scripted("1"), colour=False) == EXIT_OK
+    assert "7 of 7 formats fully recovered" in capsys.readouterr().out
+
+
+def test_the_menu_can_analyse_a_folder(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    source = corpus_dir(tmp_path)
+    assert cli.interactive_session(scripted("2", str(source)), colour=False) == EXIT_OK
+    printed = capsys.readouterr().out
+    assert "CORPUS" in printed
+    assert "records at 0x0010" in printed
+
+
+def test_the_menu_accepts_a_path_the_way_explorer_quotes_it(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = corpus_dir(tmp_path)
+    assert cli.interactive_session(scripted("2", f'"{source}"'), colour=False) == EXIT_OK
+    assert "CORPUS" in capsys.readouterr().out
+
+
+def test_the_menu_asks_again_after_a_path_that_is_not_a_folder(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = corpus_dir(tmp_path)
+    reader = scripted("9", "2", str(tmp_path / "nowhere"), str(source))
+    assert cli.interactive_session(reader, colour=False) == EXIT_OK
+    printed = capsys.readouterr().out
+    assert "Type 1, 2 or q." in printed
+    assert "is not a folder" in printed
+    assert "CORPUS" in printed
+
+
+def test_the_menu_survives_a_closed_input_stream(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.interactive_session(scripted(), colour=False) == EXIT_OK
+    assert "Choose 1, 2 or q" in capsys.readouterr().out
+
+
+def test_the_menu_reports_a_corpus_it_cannot_use(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = corpus_dir(tmp_path, "A", count=3)
+    assert cli.interactive_session(scripted("2", str(source)), colour=False) == EXIT_ERROR
+    assert "at least 4" in capsys.readouterr().err
 
 
 def test_a_directory_is_still_required_when_other_options_are_given() -> None:

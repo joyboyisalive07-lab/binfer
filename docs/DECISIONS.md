@@ -348,6 +348,23 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
   code-signing certificate, so the next best thing is a download that can be
   checked against a build log that is public.
+## 1.0.2 - a double click that does something
+
+- Printing the help on a bare double-click was still a dead end: the window
+  showed text and the tool never ran. Started by Explorer with no arguments it
+  now offers two choices, the self test and a folder to analyse, and reads the
+  answer. Started from a shell it still prints the help and exits, because a
+  shell already has somewhere to type the next command.
+- The menu appears only when `GetConsoleProcessList` reports one attached
+  process and no arguments were given. Every scripted path is untouched.
+- Pasted paths are stripped of the quotes Explorer and PowerShell add around a
+  dragged folder, and a path that is not a folder asks again rather than
+  failing.
+- Dragging a folder onto the executable already worked, since Explorer passes it
+  as the first argument. Both READMEs now say so.
+
+## Reverted
+
 - Excluding the modules binfer does not import was tried and reverted. It took
   the executable from 9.6 MB to 8.7 MB on Python 3.14 and broke it on 3.12,
   where `pathlib` imports `urllib.parse` and the interpreter cannot start
