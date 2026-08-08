@@ -331,3 +331,25 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   grey. The previous wordmark colour measured 1.6:1 against GitHub's dark page,
   which is invisible; the two palettes now measure 6.4:1 and 14.7:1 on white and
   6.5:1 and 16.0:1 on dark.
+
+## 1.0.1 - the downloaded executable
+
+- Running with no arguments prints the help and a short getting-started block
+  and exits 0. It used to be an argparse usage error and exit 2, which is right
+  for a script and useless for someone who has just double-clicked a download:
+  the window closes before the message can be read.
+- After a double-click the program waits for a keypress before exiting.
+  `GetConsoleProcessList` reporting exactly one attached process means Explorer
+  started the console for this program alone; a shell shares its console, so the
+  count is two or more and nothing pauses. Any failure to ask means no pause.
+- The executable now carries a version resource. It had none, which makes an
+  unsigned binary anonymous both to SmartScreen's reputation heuristics and to
+  anyone reading its properties. It is not a substitute for a signature.
+- Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
+  code-signing certificate, so the next best thing is a download that can be
+  checked against a build log that is public.
+- The TLS stack is excluded from the bundle. binfer never opens a socket, but
+  `ssl`, `socket`, `email`, `http` and `urllib` were being unpacked into a
+  temporary directory at every start; dropping them takes the executable from
+  10.1 MB to 8.7 MB. `libcrypto` stays because `random.Random(str)` seeds
+  through `hashlib`.

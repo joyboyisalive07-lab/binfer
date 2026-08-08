@@ -35,4 +35,7 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$env:GITHUB_REF_NAME" dist/binfer.exe --generate-notes
+        run: >
+          gh release create "$env:GITHUB_REF_NAME"
+          dist/binfer.exe dist/binfer.exe.sha256
+          --generate-notes

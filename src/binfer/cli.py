@@ -8,6 +8,7 @@ shell.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import re
 import sys
@@ -25,6 +26,18 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 DESCRIPTION = "Infer the structure of an unknown binary format from a corpus of samples."
+
+GETTING_STARTED = """
+binfer compares a directory of sample files and reports the structure they share.
+It needs a directory; there is nothing useful it can do with none.
+
+  binfer --self-test              check the tool against formats it knows the answer to
+  binfer C:\\path\\to\\samples       analyse your own samples
+  binfer --help                   every option
+
+Put at least four files of the same unknown format in one directory. Twelve or
+more makes the statistics worth trusting; below that the report says so.
+"""
 
 
 def _identifier(name: str) -> str:
@@ -74,6 +87,32 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def launched_from_explorer() -> bool:
+    """Return whether this process owns its console alone.
+
+    A console started by Explorer for a double-clicked program holds only that
+    program, so the window vanishes the moment it exits. Started from a shell,
+    the console holds the shell too. Anything other than a count of one, or any
+    failure to ask, means do not pause.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes  # noqa: PLC0415
+
+        buffer = (ctypes.c_uint * 2)()
+        attached = ctypes.windll.kernel32.GetConsoleProcessList(buffer, 2)
+    except (AttributeError, OSError):
+        return False
+    return attached == 1
+
+
+def _wait_for_reader() -> None:
+    print("\nPress Enter to close this window.", end="")
+    with contextlib.suppress(EOFError, KeyboardInterrupt):
+        input()
+
+
 def _wants_colour(stream: object, *, disabled: bool) -> bool:
     if disabled or os.environ.get("NO_COLOR"):
         return False
@@ -110,19 +149,31 @@ def _run_analysis(args: argparse.Namespace, *, colour: bool) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Parse arguments, run the requested job and return the exit code."""
     parser = build_parser()
-    args = parser.parse_args(argv)
+    requested = sys.argv[1:] if argv is None else argv
+    if not requested:
+        # Asking for nothing is not a usage error. Someone has double-clicked a
+        # downloaded executable, and an argparse complaint in a window that
+        # closes itself tells them nothing.
+        parser.print_help()
+        print(GETTING_STARTED, end="")
+        if launched_from_explorer():
+            _wait_for_reader()
+        return EXIT_OK
+
+    args = parser.parse_args(requested)
     colour = _wants_colour(sys.stdout, disabled=args.no_color)
 
     if args.self_test:
-        return _run_self_test(colour=colour)
-    if args.directory is None:
+        code = _run_self_test(colour=colour)
+    elif args.directory is None:
         parser.error("a sample directory is required unless --self-test is given")
+    else:
+        try:
+            code = _run_analysis(args, colour=colour)
+        except (CorpusError, OSError) as error:
+            print(f"binfer: {error}", file=sys.stderr)
+            code = EXIT_ERROR
 
-    try:
-        return _run_analysis(args, colour=colour)
-    except CorpusError as error:
-        print(f"binfer: {error}", file=sys.stderr)
-        return EXIT_ERROR
-    except OSError as error:
-        print(f"binfer: {error}", file=sys.stderr)
-        return EXIT_ERROR
+    if launched_from_explorer():
+        _wait_for_reader()
+    return code

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
 
-from binfer import __version__
+from binfer import __version__, cli
 from binfer.cli import EXIT_ERROR, EXIT_OK, _identifier, main
 from binfer.synth import FORMATS, format_by_key, generate
 
@@ -90,10 +91,44 @@ def test_a_corpus_that_is_too_small_reports_the_reason_and_fails(
     assert "at least 4" in capsys.readouterr().err
 
 
-def test_a_directory_is_required_unless_self_testing() -> None:
+def test_no_arguments_shows_help_and_how_to_start(capsys: pytest.CaptureFixture[str]) -> None:
+    """A double-clicked executable must not answer with an argparse complaint."""
+    assert main([]) == EXIT_OK
+    printed = capsys.readouterr().out
+    assert "usage: binfer" in printed
+    assert "binfer --self-test" in printed
+    assert "at least four files" in printed
+    assert "error:" not in printed
+
+
+def test_a_directory_is_still_required_when_other_options_are_given() -> None:
     with pytest.raises(SystemExit) as exit_info:
-        main([])
+        main(["--no-color"])
     assert exit_info.value.code == USAGE_EXIT
+
+
+def test_the_window_is_held_open_only_when_explorer_started_it(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prompts: list[str] = []
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda: prompts.append("waited") or "")
+
+    assert main([str(corpus_dir(tmp_path, "A")), "--no-color"]) == EXIT_OK
+    assert prompts == ["waited"]
+    assert "Press Enter to close this window." in capsys.readouterr().out
+
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
+    prompts.clear()
+    assert main([str(corpus_dir(tmp_path, "A")), "--no-color"]) == EXIT_OK
+    assert prompts == []
+
+
+def test_explorer_detection_is_false_off_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert cli.launched_from_explorer() is False
 
 
 def test_max_files_limits_the_corpus(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -24,22 +24,59 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
-    foreach ($stale in 'build', 'dist', 'binfer.spec') {
+    foreach ($stale in 'build', 'dist', 'binfer.spec', 'version_info.txt') {
         if (Test-Path $stale) {
             Remove-Item $stale -Recurse -Force
         }
     }
 
-    Write-Host 'building dist/binfer.exe'
-    python -m PyInstaller `
-        --onefile `
-        --console `
-        --name binfer `
-        --paths src `
-        --noconfirm `
-        --clean `
-        --log-level WARN `
-        src/binfer/__main__.py
+    $version = (python -c "import sys; sys.path.insert(0, 'src'); import binfer; print(binfer.__version__)")
+    if ($LASTEXITCODE -ne 0) { throw 'could not read the version from the source' }
+    $parts = $version.Split('.')
+    $quad = "$($parts[0]), $($parts[1]), $($parts[2]), 0"
+
+    # An unsigned executable with no version resource is anonymous to
+    # SmartScreen and to anyone reading its properties. The resource does not
+    # replace a signature, but it costs nothing and it is what the reputation
+    # heuristics look at first.
+    $versionInfo = @"
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=($quad), prodvers=($quad),
+    mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([StringTable('040904B0', [
+      StringStruct('CompanyName', 'joyboyisalive07-lab'),
+      StringStruct('FileDescription', 'binfer - structure inference for unknown binary formats'),
+      StringStruct('FileVersion', '$version.0'),
+      StringStruct('InternalName', 'binfer'),
+      StringStruct('LegalCopyright', 'MIT License. Copyright (c) 2026 joyboyisalive07-lab'),
+      StringStruct('OriginalFilename', 'binfer.exe'),
+      StringStruct('ProductName', 'binfer'),
+      StringStruct('ProductVersion', '$version')
+    ])]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
+"@
+    Set-Content -Path 'version_info.txt' -Value $versionInfo -Encoding ascii
+
+    # binfer never opens a socket, so the TLS stack and the modules that drag it
+    # in have no business being unpacked into a temporary directory at every
+    # start. Dropping them removes about 7 MB of OpenSSL from the executable.
+    $excluded = @('ssl', 'socket', 'email', 'http', 'urllib', 'xml', 'unittest', 'pydoc', 'doctest')
+
+    Write-Host "building dist/binfer.exe for version $version"
+    $pyinstallerArgs = @(
+        '--onefile', '--console', '--name', 'binfer', '--paths', 'src',
+        '--noconfirm', '--clean', '--log-level', 'WARN',
+        '--version-file', 'version_info.txt'
+    )
+    foreach ($module in $excluded) {
+        $pyinstallerArgs += @('--exclude-module', $module)
+    }
+    python -m PyInstaller @pyinstallerArgs src/binfer/__main__.py
     if ($LASTEXITCODE -ne 0) {
         throw "pyinstaller failed with exit code $LASTEXITCODE"
     }
@@ -50,6 +87,13 @@ try {
     }
     $megabytes = [math]::Round((Get-Item $exe).Length / 1MB, 1)
     Write-Host "built $exe ($megabytes MB)"
+
+    # Published beside the executable so a download can be checked without
+    # trusting the transfer. It is not a signature, but it is verifiable.
+    $digest = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+    Set-Content -Path (Join-Path $root 'dist/binfer.exe.sha256') `
+        -Value "$digest *binfer.exe" -Encoding ascii
+    Write-Host "sha256 $digest"
 
     if ($SkipVerify) {
         Write-Host 'verification skipped'

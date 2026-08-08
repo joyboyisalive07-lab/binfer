@@ -75,13 +75,33 @@ python -m pip install -e .
 
 ### A note on Windows Defender and SmartScreen
 
-Executables built with PyInstaller are sometimes flagged by Windows Defender or
-warned about by SmartScreen. This is not specific to binfer: a PyInstaller
-one-file executable unpacks a Python interpreter into a temporary directory and
-runs it, which is a shape that some heuristics treat as suspicious, and the
-binary is unsigned because code-signing certificates cost money this project
-does not have. If that is a problem for you, build from source with
-`tools/build.ps1` or run `python -m binfer`; both do exactly the same work.
+SmartScreen will warn about this download, and Defender occasionally quarantines
+it. That is expected and cannot be fixed from this side: a PyInstaller one-file
+executable unpacks a Python interpreter into a temporary directory and runs it,
+which some heuristics treat as suspicious, and the binary is unsigned because a
+code-signing certificate costs money this project does not have. A signature is
+the only thing that removes the warning, and there is no signature.
+
+What you can do instead:
+
+- Verify the download. Every release ships `binfer.exe.sha256`; compare it with
+  `Get-FileHash .\binfer.exe -Algorithm SHA256`. The executable is built by the
+  release workflow from the tagged commit, and the log is public.
+- To run it anyway: **More info** in the SmartScreen dialog, then **Run anyway**.
+- Or skip the executable entirely and run from source with `python -m binfer`.
+  It does exactly the same work.
+
+### Running it
+
+binfer is a command-line tool. Double-clicking it opens a console, prints the
+help and waits for a keypress, which is all it can usefully do without a
+directory to look at. Open PowerShell in the folder you put it in and give it
+one:
+
+```powershell
+.\binfer.exe --self-test
+.\binfer.exe C:\path\to\samples
+```
 
 ## Usage
 
