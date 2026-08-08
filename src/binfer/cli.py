@@ -112,6 +112,23 @@ def launched_from_explorer() -> bool:
     return attached == 1
 
 
+def someone_is_watching() -> bool:
+    """Return whether there is a person at a keyboard to answer a question.
+
+    An interactive stdin is the reliable signal and covers a double-click, a
+    bare name typed at a prompt, and a terminal of any kind. The console-owner
+    check is kept as a fallback because a redirected stdin under Explorer is
+    still a person, and because terminal hosts differ in what they attach to
+    the console.
+    """
+    try:
+        if sys.stdin is not None and sys.stdin.isatty():
+            return True
+    except (AttributeError, ValueError):
+        pass
+    return launched_from_explorer()
+
+
 def _wait_for_reader() -> None:
     print("\nPress Enter to close this window.", end="")
     with contextlib.suppress(EOFError, KeyboardInterrupt):
@@ -240,10 +257,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     requested = sys.argv[1:] if argv is None else argv
     if not requested:
-        # Asking for nothing is not a usage error. Started from Explorer there
-        # is a person watching, so ask them what to do; started from a shell,
-        # print the help and let them type the next command.
-        if launched_from_explorer():
+        # Asked for nothing with a keyboard attached means a person is watching,
+        # whether they double-clicked the file or typed its name. Ask them what
+        # to do. With input redirected there is nobody to ask, so print the help
+        # and let the script read it.
+        if someone_is_watching():
             code = interactive_session(input, colour=_wants_colour(sys.stdout, disabled=False))
             _wait_for_reader()
             return code

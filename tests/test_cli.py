@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import sys
 from typing import TYPE_CHECKING
@@ -98,10 +99,10 @@ def scripted(*answers: str) -> Callable[[], str]:
     return lambda: queue.pop(0) if queue else (_ for _ in ()).throw(EOFError)
 
 
-def test_no_arguments_from_a_shell_shows_help_and_how_to_start(
+def test_no_arguments_with_input_redirected_shows_help(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
+    monkeypatch.setattr(cli, "someone_is_watching", lambda: False)
     assert main([]) == EXIT_OK
     printed = capsys.readouterr().out
     assert "usage: binfer" in printed
@@ -109,16 +110,50 @@ def test_no_arguments_from_a_shell_shows_help_and_how_to_start(
     assert "error:" not in printed
 
 
-def test_a_double_click_offers_a_choice_instead_of_usage_text(
+def test_no_arguments_with_a_keyboard_offers_a_choice(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(cli, "launched_from_explorer", lambda: True)
+    monkeypatch.setattr(cli, "someone_is_watching", lambda: True)
     monkeypatch.setattr("builtins.input", scripted("q"))
     assert main([]) == EXIT_OK
     printed = capsys.readouterr().out
     assert "Choose 1, 2 or q" in printed
     assert "drag a folder onto binfer.exe" in printed
     assert "Press Enter to close this window." in printed
+
+
+def test_an_interactive_stdin_is_enough_without_the_console_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The console-owner count is a fallback, not the thing the menu depends on.
+
+    Terminal hosts differ in what they attach to a console, so a tool that only
+    asked that question could stay silent on the machine that needed it most.
+    """
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
+    monkeypatch.setattr(sys, "stdin", io.StringIO())
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    assert cli.someone_is_watching() is True
+
+
+def test_a_redirected_stdin_under_explorer_still_counts_as_watched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: True)
+    monkeypatch.setattr(sys, "stdin", io.StringIO())
+    assert cli.someone_is_watching() is True
+
+
+def test_nobody_is_watching_a_pipe(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
+    monkeypatch.setattr(sys, "stdin", io.StringIO())
+    assert cli.someone_is_watching() is False
+
+
+def test_a_closed_stdin_does_not_crash_the_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "launched_from_explorer", lambda: False)
+    monkeypatch.setattr(sys, "stdin", None)
+    assert cli.someone_is_watching() is False
 
 
 def test_the_menu_can_run_the_self_test(capsys: pytest.CaptureFixture[str]) -> None:

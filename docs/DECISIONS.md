@@ -348,6 +348,18 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
   code-signing certificate, so the next best thing is a download that can be
   checked against a build log that is public.
+## 1.0.3 - asking the right question about who is watching
+
+- The menu keyed off `GetConsoleProcessList` alone, which is a fragile thing to
+  depend on: terminal hosts differ in what they attach to a console, so on the
+  machine that most needed the menu it could stay silent. An interactive stdin
+  is the reliable signal and covers a double-click, a bare name typed at a
+  prompt and any terminal. The console-owner count remains as a fallback for a
+  redirected stdin under Explorer.
+- The README opens with a quick start. The instructions existed but sat below
+  the fold, under headings that assume the reader already knows what the tool
+  is; someone who has just downloaded an executable does not read that far.
+
 ## 1.0.2 - a double click that does something
 
 - Printing the help on a bare double-click was still a dead end: the window

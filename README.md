@@ -9,6 +9,25 @@ binfer reads a directory of sample files in the same unknown binary format and
 prints a text report describing the fields it found, with the evidence for each
 one.
 
+## Quick start
+
+1. Download `binfer.exe` from the
+   [latest release](https://github.com/joyboyisalive07-lab/binfer/releases/latest).
+   SmartScreen will warn about it; see [below](#a-note-on-windows-defender-and-smartscreen).
+2. **Double-click it.** It asks whether to run the self test or analyse a
+   folder, and waits for you before closing. Press `1` to watch it work on
+   formats whose answers are known, using no files of yours.
+3. To analyse your own files, put at least four samples of the same unknown
+   format in one folder and either type its path into that prompt, drag the
+   folder onto `binfer.exe`, or run:
+
+```powershell
+.\binfer.exe C:\path\to\samples
+```
+
+binfer is a command-line tool, so it prints a report and exits. It writes
+nothing anywhere unless you pass `--json` or `--ksy`.
+
 ## The problem
 
 You have thirty save files from a game, or thirty exports from a program whose
