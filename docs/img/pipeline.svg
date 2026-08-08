@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="990" height="154" viewBox="0 0 990 154" role="img" aria-label="pipeline">
+<title>pipeline</title>
+<rect x="20" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="32" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">1  CORPUS</text>
+<text x="32" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">load the samples,</text>
+<text x="32" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">refuse fewer than four,</text>
+<text x="32" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">align head and tail</text>
+<path d="M168 72.0 H175" stroke="#6e7681" stroke-width="1"/>
+<path d="M175 68.5 L180 72.0 L175 75.5 Z" fill="#6e7681"/>
+<rect x="181" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="193" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">2  COLUMNS</text>
+<text x="193" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">per offset: histogram,</text>
+<text x="193" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">entropy, and which bits</text>
+<text x="193" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">ever move</text>
+<path d="M329 72.0 H336" stroke="#6e7681" stroke-width="1"/>
+<path d="M336 68.5 L341 72.0 L336 75.5 Z" fill="#6e7681"/>
+<rect x="342" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="354" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">3  TYPES</text>
+<text x="354" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">score readings, refuse</text>
+<text x="354" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">the ones nothing in the</text>
+<text x="354" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">corpus supports</text>
+<path d="M490 72.0 H497" stroke="#6e7681" stroke-width="1"/>
+<path d="M497 68.5 L502 72.0 L497 75.5 Z" fill="#6e7681"/>
+<rect x="503" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="515" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">4  RELATIONS</text>
+<text x="515" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">exact length, count,</text>
+<text x="515" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">pointer and checksum;</text>
+<text x="515" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">no approximations</text>
+<path d="M651 72.0 H658" stroke="#6e7681" stroke-width="1"/>
+<path d="M658 68.5 L663 72.0 L658 75.5 Z" fill="#6e7681"/>
+<rect x="664" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="676" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">5  RECORDS</text>
+<text x="676" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">segment the counted</text>
+<text x="676" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">region and run stages</text>
+<text x="676" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">2-4 inside a record</text>
+<path d="M812 72.0 H819" stroke="#6e7681" stroke-width="1"/>
+<path d="M819 68.5 L824 72.0 L819 75.5 Z" fill="#6e7681"/>
+<rect x="825" y="26" width="145" height="92" rx="4" fill="none" stroke="#6e7681" stroke-width="1"/>
+<text x="837" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#30363d">6  REPORT</text>
+<text x="837" y="68" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">resolve overlaps and</text>
+<text x="837" y="82" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">name every span left</text>
+<text x="837" y="96" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="9.5" fill="#6e7681">unexplained</text>
+<text x="20" y="140" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" fill="#6e7681">Every stage may refuse to conclude. What no stage explains is reported as unexplained, not filled in.</text>
+</svg>

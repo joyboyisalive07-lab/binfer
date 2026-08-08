@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="559" height="296" viewBox="0 0 559 296" role="img" aria-label="binfer --self-test output">
+<title>binfer --self-test output</title>
+<rect width="559" height="296" rx="6" fill="#0d1117"/>
+<path d="M0 26 H559" stroke="#21262d" stroke-width="1"/>
+<circle cx="18" cy="13" r="4" fill="#30363d"/>
+<circle cx="33" cy="13" r="4" fill="#30363d"/>
+<circle cx="48" cy="13" r="4" fill="#30363d"/>
+<text x="279" y="17" text-anchor="middle" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" fill="#8b949e">binfer --self-test</text>
+<text x="18" y="57" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">SELF TEST</text>
+<text x="18" y="75" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e" xml:space="preserve">  binfer 1.0.0, 7 synthetic formats with declared ground truth</text>
+<text x="18" y="93" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve"></text>
+<text x="18" y="111" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e" xml:space="preserve">  KEY  FORMAT            FIELDS  RELATIONS  RECORDS  OPAQUE  RESULT</text>
+<text x="18" y="129" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  A    fixed-record      6/6     -          -        ok      pass</text>
+<text x="18" y="147" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  B    length-and-crc    4/4     2/2        -        ok      pass</text>
+<text x="18" y="165" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  C    counted-records   4/4     2/2        6/6      ok      pass</text>
+<text x="18" y="183" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  D    strings           6/6     1/1        -        ok      pass</text>
+<text x="18" y="201" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  E    opaque-blob       4/4     1/1        -        ok      pass</text>
+<text x="18" y="219" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  F    timestamps        6/6     -          -        ok      pass</text>
+<text x="18" y="237" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  G    numeric-zoo       9/9     -          -        ok      pass</text>
+<text x="18" y="255" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve"></text>
+<text x="18" y="273" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  7 of 7 formats fully recovered</text>
+</svg>

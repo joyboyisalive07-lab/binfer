@@ -288,3 +288,24 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - The spec file is generated rather than committed. It is derived entirely from
   the command line above, and a checked-in copy would be a second place for the
   build to be configured.
+
+## Phase 9 - documentation, images and workflows
+
+- `docs/img/report.svg` is typeset from the text `--self-test` actually printed,
+  so the picture in the README cannot show output the program does not produce.
+  CI regenerates all three images and fails if the committed files differ.
+- The logo is a byte grid: filled columns are identical across the corpus,
+  outlined ones vary. That is the tool's whole idea drawn with rectangles, and
+  it needs no clip art and no gradient.
+- All three images use one neutral grey rather than a light and a dark variant,
+  so they stay legible on either background without theme switching.
+- The report stays in English even in the Russian README, and the Russian README
+  says why: a report is meant to be pasted into a forum post or an issue where
+  the readers do not share a language.
+- The release workflow publishes with `gh release create` rather than a
+  third-party action. `gh` is on the runner, it authenticates with the default
+  token, and a project whose selling point is having no dependencies should not
+  acquire one in its release path.
+- CI runs the self test as a separate step from pytest. The suite already covers
+  it, but a release is cut from the executable and the same command has to be
+  seen passing on both platforms.
