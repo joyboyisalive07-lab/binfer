@@ -185,7 +185,7 @@ def test_ksy_names_an_interior_hole_explicitly() -> None:
         discovered=12,
     )
     draft = render_ksy(analyze(corpus))
-    assert "- id: unknown_01_0x0004" in draft
+    assert "- id: unknown_0x0004" in draft
     assert "size: 8" in draft
     assert "doc: not explained by the analysis" in draft
 

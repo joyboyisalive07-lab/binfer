@@ -30,10 +30,10 @@ This is the rule the project is built on. Any new detector, threshold or scoring
 rule must come with a synthetic format in `src/binfer/synth.py` whose schema is
 declared before the bytes exist, and a test proving the detector recovers it.
 
-The reason is that a binary-format guesser is trivially able to look impressive
-and be wrong, and there is no way to tell from the output alone. If a heuristic
-cannot be demonstrated against a format whose layout is known in advance, it
-gets deleted rather than shipped. Several already have been.
+A binary-format guesser can look convincing and be wrong, and the output alone
+does not distinguish the two. If a heuristic cannot be demonstrated against a
+format whose layout is known in advance, it gets deleted rather than shipped.
+Several already have been.
 
 Two checks come free with that and are worth keeping in mind:
 

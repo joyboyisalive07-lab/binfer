@@ -188,10 +188,9 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 
 - The record size is never guessed. It comes from a count field whose
   arithmetic the relation stage proved exactly, or from `--record-size`. A blind
-  search over plausible strides is a real technique, but there is no synthetic
-  format that would prove it works, and this project deletes heuristics with no
-  ground truth rather than shipping them. The README says so under what v1.0
-  does not do.
+  search over plausible strides is a real technique, but no synthetic format
+  here would demonstrate that it works, so it is not shipped. The README says so
+  under what v1.0 does not do.
 - Where the records start is inferred, because the arithmetic cannot say it. A
   count relation reads `value * k + c == file size` and does not reveal whether
   the `c` bytes sit in front of the records, behind them, or both. Every start
@@ -310,14 +309,25 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   it, but a release is cut from the executable and the same command has to be
   seen passing on both platforms.
 
-## 1.0.1 - a column that ate its own separator
+## Release audit
 
-- Every padded column now reserves one space, because a value that exactly
-  filled its column ran into the next one and printed `enum16le72..75`. The
-  width tests all passed: they checked that no line exceeded a hundred columns,
-  which a run-together line does even better than a correct one. Found by
-  reading the output of the published executable on a real corpus, which is the
-  only check that would have caught it.
+- Every padded column reserves one space. A value that exactly filled its column
+  ran into the next one and printed `enum16le72..75`. The width tests passed
+  throughout: they checked that no line exceeded a hundred columns, which a
+  run-together line does even better than a correct one. Two tests now assert
+  the separator directly.
 - The type column is a byte wider and the evidence budget a byte narrower, so
   `u32le / enum16le` still fits beside its value. The longest evidence string
-  the tool can emit is 36 characters and the layout now allows exactly that.
+  the tool can emit is 36 characters and the layout allows exactly that.
+- The checksum budget divided by a literal 3 for the number of ranges hashed per
+  span. It now divides by `len(RANGES)`, so adding a fourth range cannot leave
+  the budget silently wrong.
+- Kaitai attribute ids are derived from the offset alone. They previously
+  carried a sequence number, which forced a fabricated index of 99 for the
+  trailing span; the offset is already unique.
+- Scorecard column widths and the JSON entropy precision are named constants,
+  matching every other column in the renderer.
+- The line art carries a `prefers-color-scheme` style block instead of one fixed
+  grey. The previous wordmark colour measured 1.6:1 against GitHub's dark page,
+  which is invisible; the two palettes now measure 6.4:1 and 14.7:1 on white and
+  6.5:1 and 16.0:1 on dark.

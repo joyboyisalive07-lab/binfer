@@ -1,12 +1,11 @@
 """Renderers: the text report, the JSON findings and the Kaitai Struct draft.
 
-Nothing here concludes anything. Every number printed was decided by an earlier
-stage, which is what makes it possible to say that the report never carries a
-claim without the count behind it: the count travels with the claim.
+Nothing here concludes anything: every number printed was decided by an earlier
+stage, and each claim carries the evidence count that supports it.
 
-The text report is laid out for a hundred-column terminal and for pasting into
-a forum post, so it uses no box drawing and no colour beyond the confidence
-column, which can be turned off.
+The text report targets a hundred-column terminal and pasting into a forum post,
+so it uses no box drawing and no colour beyond the confidence column, which can
+be turned off.
 """
 
 from __future__ import annotations
@@ -35,6 +34,15 @@ SUMMARY_COLUMN = 37
 SPAN_COLUMN = 19
 REGION_KIND_COLUMN = 14
 ENTROPY_COLUMN = 16
+KEY_COLUMN = 5
+FORMAT_COLUMN = 18
+TALLY_COLUMN = 8
+RELATION_TALLY_COLUMN = 11
+RECORD_TALLY_COLUMN = 9
+OPAQUE_COLUMN = 8
+
+# Enough to distinguish two spans without implying the estimate is that precise.
+ENTROPY_DECIMALS = 4
 
 _COLOURS = {
     Confidence.PROVED: "\x1b[32m",
@@ -235,11 +243,11 @@ def render_scorecard(cards: Sequence[Scorecard], *, colour: bool = False) -> str
             f"{_COLOURS[Confidence.PROVED]}{verdict}{_RESET}" if colour and card.passed else verdict
         )
         lines.append(
-            f"  {card.key.ljust(5)}{card.name.ljust(18)}"
-            f"{_tally(card.fields).ljust(8)}"
-            f"{_tally(card.relations).ljust(11)}"
-            f"{_tally(card.record_fields).ljust(9)}"
-            f"{('ok' if card.opaque_ok else 'no').ljust(8)}{tinted}"
+            f"  {_cell(card.key, KEY_COLUMN)}{_cell(card.name, FORMAT_COLUMN)}"
+            f"{_cell(_tally(card.fields), TALLY_COLUMN)}"
+            f"{_cell(_tally(card.relations), RELATION_TALLY_COLUMN)}"
+            f"{_cell(_tally(card.record_fields), RECORD_TALLY_COLUMN)}"
+            f"{_cell('ok' if card.opaque_ok else 'no', OPAQUE_COLUMN)}{tinted}"
         )
 
     failed = [card for card in cards if not card.passed]
@@ -309,7 +317,7 @@ def render_json(report: Report) -> str:
                 "start": region.start,
                 "end": region.end,
                 "kind": region.kind.value,
-                "entropy": round(region.entropy, 4),
+                "entropy": round(region.entropy, ENTROPY_DECIMALS),
                 "note": region.note,
             }
             for region in report.regions
@@ -364,9 +372,8 @@ _KAITAI_TYPES = {
 }
 
 
-def _kaitai_attribute(field: Field, index: int) -> list[str]:
-    name = f"field_{index:02d}_{position(field.offset).lower().replace('-', '_')}"
-    lines = [f"  - id: {name}"]
+def _kaitai_attribute(field: Field) -> list[str]:
+    lines = [f"  - id: {_identifier('field', field.offset)}"]
     mapped = _KAITAI_TYPES.get(field.type_name)
     if field.raw is not None:
         contents = ", ".join(f"0x{byte:02x}" for byte in field.raw)
@@ -383,22 +390,27 @@ def _kaitai_attribute(field: Field, index: int) -> list[str]:
     return lines
 
 
-def _kaitai_gap(start: int, index: int, size: int | None, doc: str) -> list[str]:
-    lines = [f"  - id: unknown_{index:02d}_{position(start).lower().replace('-', '_')}"]
-    lines.append(f"    size: {size}" if size is not None else "    size-eos: true")
-    lines.append(f"    doc: {doc}")
-    return lines
+def _identifier(prefix: str, offset: int) -> str:
+    return f"{prefix}_{position(offset).lower().replace('-', '_')}"
+
+
+def _kaitai_gap(start: int, size: int | None, doc: str) -> list[str]:
+    return [
+        f"  - id: {_identifier('unknown', start)}",
+        f"    size: {size}" if size is not None else "    size-eos: true",
+        f"    doc: {doc}",
+    ]
 
 
 def _kaitai_sequence(fields: Iterable[Field], start: int) -> list[str]:
     lines: list[str] = []
     cursor = start
-    for index, field in enumerate(fields):
+    for field in fields:
         if field.offset > cursor:
             lines.extend(
-                _kaitai_gap(cursor, index, field.offset - cursor, "not explained by the analysis")
+                _kaitai_gap(cursor, field.offset - cursor, "not explained by the analysis")
             )
-        lines.extend(_kaitai_attribute(field, index))
+        lines.extend(_kaitai_attribute(field))
         cursor = field.end
     return lines
 
@@ -425,7 +437,7 @@ def _kaitai_tail(report: Report, cursor: int) -> list[str]:
         doc += (
             f"; the last {-trailing.end} bytes are described in the report but need an expression"
         )
-    return _kaitai_gap(trailing.start, 99, None, doc)
+    return _kaitai_gap(trailing.start, None, doc)
 
 
 def render_ksy(report: Report, format_id: str = "unknown_format") -> str:

@@ -7,7 +7,7 @@
 <circle cx="48" cy="13" r="4" fill="#30363d"/>
 <text x="279" y="17" text-anchor="middle" font-family="ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" fill="#8b949e">binfer --self-test</text>
 <text x="18" y="57" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">SELF TEST</text>
-<text x="18" y="75" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e" xml:space="preserve">  binfer 1.0.1, 7 synthetic formats with declared ground truth</text>
+<text x="18" y="75" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e" xml:space="preserve">  binfer 1.0.0, 7 synthetic formats with declared ground truth</text>
 <text x="18" y="93" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve"></text>
 <text x="18" y="111" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e" xml:space="preserve">  KEY  FORMAT            FIELDS  RELATIONS  RECORDS  OPAQUE  RESULT</text>
 <text x="18" y="129" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#c9d1d9" xml:space="preserve">  A    fixed-record      6/6     -          -        ok      pass</text>

@@ -7,8 +7,8 @@ emitted only when the corpus carries positive evidence for it: constant zero
 high bytes, a high byte that never approaches 0xFF, byte entropy that falls
 towards the significant end, or a high byte confined to the two neighbourhoods
 of 0x00 and 0xFF that a signed value produces. Without one of those the span is
-left unexplained, which is the honest answer and the reason a compressed blob
-does not fill the field table with invented integers.
+left unexplained, which is why a compressed blob does not fill the field table
+with invented integers.
 
 Selection runs in two passes. Typed hypotheses compete first, greedily by score.
 Constant columns that nothing claimed then become magic and const fields,

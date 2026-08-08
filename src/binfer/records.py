@@ -1,10 +1,9 @@
 """Repeated-record segmentation, and recursion of the earlier stages into a record.
 
 The record size is never guessed. It comes from a count field whose arithmetic
-the relation stage proved exactly, or from ``--record-size`` when the user
-already knows it. A blind search over plausible strides would be a heuristic
-with no ground truth behind it, and this project deletes those rather than
-shipping them.
+the relation stage proved exactly, or from ``--record-size`` when the caller
+already knows it. A blind search over plausible strides is not attempted: no
+synthetic format here would demonstrate that such a search works.
 
 Where the records start is inferred, because the arithmetic does not say: a
 count relation reads ``value * k + c == file size`` and cannot tell whether the

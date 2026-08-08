@@ -30,8 +30,10 @@ if TYPE_CHECKING:
     from binfer.corpus import Alignment, Corpus
 
 BITS_PER_BYTE = 8
+BYTE_MASK = 0xFF
 CANDIDATE_SIZES = (1, 2, 4, 8)
 CRC16_MASK = 0xFFFF
+CRC16_MSB = 0x8000
 
 # Length and pointer fields live in headers and trailers. Scanning further costs
 # a decode per offset per sample and buys nothing.
@@ -48,9 +50,9 @@ MIN_POINTER_STRING = 3
 # Checksums sit in the header or the trailer, never in the middle.
 CHECKSUM_WINDOW = 64
 
-# Hashing budget for the whole checksum search, in bytes. Each candidate span
-# costs roughly three passes over one sample, so this bounds the search on a
-# corpus of large files instead of letting it run for minutes.
+# Hashing budget for the whole checksum search, in bytes. A candidate span costs
+# one pass per range over one sample, so this bounds the search on a corpus of
+# large files instead of letting it run for minutes.
 CHECKSUM_BUDGET_BYTES = 256 * 1024 * 1024
 MIN_CHECKSUM_SPANS = 8
 
@@ -78,7 +80,7 @@ def _forward_table(poly: int) -> tuple[int, ...]:
     for value in range(BYTE_VALUES):
         crc = (value << BITS_PER_BYTE) & CRC16_MASK
         for _ in range(BITS_PER_BYTE):
-            crc = ((crc << 1) ^ poly) & CRC16_MASK if crc & 0x8000 else (crc << 1) & CRC16_MASK
+            crc = ((crc << 1) ^ poly) & CRC16_MASK if crc & CRC16_MSB else (crc << 1) & CRC16_MASK
         table.append(crc)
     return tuple(table)
 
@@ -93,7 +95,7 @@ def crc16_reflected(data: bytes, init: int) -> int:
     """Compute a reflected CRC-16 over the 0x8005 polynomial."""
     crc = init
     for byte in data:
-        crc = (crc >> BITS_PER_BYTE) ^ _REFLECTED[(crc ^ byte) & 0xFF]
+        crc = (crc >> BITS_PER_BYTE) ^ _REFLECTED[(crc ^ byte) & BYTE_MASK]
     return crc
 
 
@@ -102,7 +104,7 @@ def crc16_forward(data: bytes, init: int) -> int:
     crc = init
     for byte in data:
         crc = ((crc << BITS_PER_BYTE) & CRC16_MASK) ^ _FORWARD[
-            ((crc >> BITS_PER_BYTE) ^ byte) & 0xFF
+            ((crc >> BITS_PER_BYTE) ^ byte) & BYTE_MASK
         ]
     return crc
 
@@ -403,7 +405,8 @@ def find_checksum_relations(
     pool = checksum_pool(candidates)
     notes: list[str] = []
 
-    allowed = max(MIN_CHECKSUM_SPANS, CHECKSUM_BUDGET_BYTES // max(1, 3 * corpus.max_size))
+    per_span = len(RANGES) * corpus.max_size
+    allowed = max(MIN_CHECKSUM_SPANS, CHECKSUM_BUDGET_BYTES // max(1, per_span))
     if len(pool) > allowed:
         notes.append(
             f"checksum search covered {allowed} of {len(pool)} candidate spans; "

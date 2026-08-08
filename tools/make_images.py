@@ -4,8 +4,9 @@ Nothing here is a mock-up. ``report.svg`` is produced by running the tool's own
 self test and typesetting the text it actually printed, so the picture in the
 README cannot claim output the program does not produce.
 
-All three are monochrome, use no gradients and no raster assets, and are legible
-on a light or a dark page.
+All three are monochrome, use no gradients and no raster assets. The line art
+swaps two colours under ``prefers-color-scheme`` so it stays legible on a light
+or a dark page; the terminal picture is a dark window on both.
 """
 
 from __future__ import annotations
@@ -22,13 +23,29 @@ from binfer.synth import score_all  # noqa: E402
 
 OUT = ROOT / "docs" / "img"
 
-# A neutral grey that stays legible on white and on a dark page, so the images
-# need no theme switching.
-INK = "#6e7681"
-STRONG = "#30363d"
+# One fixed grey cannot serve both GitHub themes: anything dark enough to read
+# on white falls to about 1.5:1 on the dark page. The line art carries a style
+# block instead and swaps two colours under prefers-color-scheme, which the
+# browser applies even when the SVG is loaded through an <img> tag.
+INK_LIGHT, STRONG_LIGHT = "#57606a", "#24292f"
+INK_DARK, STRONG_DARK = "#9198a1", "#e6edf3"
+
+# The terminal picture is a dark window on both themes, the way a terminal is.
 TERMINAL_BG = "#0d1117"
 TERMINAL_FG = "#c9d1d9"
 TERMINAL_DIM = "#8b949e"
+
+THEME_STYLE = f"""<style>
+  .ink {{ fill: {INK_LIGHT}; }}
+  .ink-stroke {{ stroke: {INK_LIGHT}; fill: none; }}
+  .strong {{ fill: {STRONG_LIGHT}; }}
+  @media (prefers-color-scheme: dark) {{
+    .ink {{ fill: {INK_DARK}; }}
+    .ink-stroke {{ stroke: {INK_DARK}; }}
+    .strong {{ fill: {STRONG_DARK}; }}
+  }}
+</style>
+"""
 
 MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
 SANS = "ui-sans-serif, system-ui, Segoe UI, Helvetica, Arial, sans-serif"
@@ -39,11 +56,11 @@ LINE_HEIGHT = 18
 PADDING = 18
 
 
-def _svg(width: float, height: float, body: str, title: str) -> str:
+def _svg(width: float, height: float, body: str, title: str, *, themed: bool = False) -> str:
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width:.0f}" height="{height:.0f}" '
         f'viewBox="0 0 {width:.0f} {height:.0f}" role="img" aria-label="{escape(title)}">\n'
-        f"<title>{escape(title)}</title>\n{body}</svg>\n"
+        f"<title>{escape(title)}</title>\n{THEME_STYLE if themed else ''}{body}</svg>\n"
     )
 
 
@@ -65,24 +82,24 @@ def logo() -> str:
             y = 20 + row * (cell + gap)
             if column in filled or (column in partial and row % 2 == 0):
                 squares.append(
-                    f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="{STRONG}"/>'
+                    f'<rect class="strong" x="{x}" y="{y}" width="{cell}" height="{cell}"/>'
                 )
             else:
                 squares.append(
-                    f'<rect x="{x + 0.5}" y="{y + 0.5}" width="{cell - 1}" height="{cell - 1}" '
-                    f'fill="none" stroke="{INK}" stroke-width="1"/>'
+                    f'<rect class="ink-stroke" x="{x + 0.5}" y="{y + 0.5}" '
+                    f'width="{cell - 1}" height="{cell - 1}" stroke-width="1"/>'
                 )
 
     grid_width = columns * (cell + gap) - gap
     text_x = 20 + grid_width + 22
     body = (
         "\n".join(squares)
-        + f'\n<text x="{text_x}" y="{20 + rows * (cell + gap) - gap - 12}" font-family="{MONO}" '
-        f'font-size="34" fill="{STRONG}" letter-spacing="-0.5">binfer</text>\n'
-        f'<text x="{text_x + 2}" y="{20 + rows * (cell + gap) - gap + 8}" font-family="{SANS}" '
-        f'font-size="11" fill="{INK}">structure inference for unknown binaries</text>\n'
+        + f'\n<text class="strong" x="{text_x}" y="{20 + rows * (cell + gap) - gap - 12}" '
+        f'font-family="{MONO}" font-size="34" letter-spacing="-0.5">binfer</text>\n'
+        f'<text class="ink" x="{text_x + 2}" y="{20 + rows * (cell + gap) - gap + 8}" '
+        f'font-family="{SANS}" font-size="11">structure inference for unknown binaries</text>\n'
     )
-    return _svg(text_x + 268, 20 + rows * (cell + gap) - gap + 22, body, "binfer")
+    return _svg(text_x + 268, 20 + rows * (cell + gap) - gap + 22, body, "binfer", themed=True)
 
 
 STAGES = (
@@ -104,37 +121,43 @@ def pipeline() -> str:
     for index, (title, lines) in enumerate(STAGES):
         x = left + index * (box_width + gap)
         parts.append(
-            f'<rect x="{x}" y="{top}" width="{box_width}" height="{box_height}" rx="4" '
-            f'fill="none" stroke="{INK}" stroke-width="1"/>'
+            f'<rect class="ink-stroke" x="{x}" y="{top}" width="{box_width}" '
+            f'height="{box_height}" rx="4" stroke-width="1"/>'
         )
         parts.append(
-            f'<text x="{x + 12}" y="{top + 22}" font-family="{MONO}" font-size="12" '
-            f'fill="{STRONG}">{escape(title)}</text>'
+            f'<text class="strong" x="{x + 12}" y="{top + 22}" font-family="{MONO}" '
+            f'font-size="12">{escape(title)}</text>'
         )
-        for line_index, line in enumerate(lines):
-            parts.append(
-                f'<text x="{x + 12}" y="{top + 42 + line_index * 14}" font-family="{SANS}" '
-                f'font-size="9.5" fill="{INK}">{escape(line)}</text>'
-            )
+        parts.extend(
+            f'<text class="ink" x="{x + 12}" y="{top + 42 + line_index * 14}" '
+            f'font-family="{SANS}" font-size="9.5">{escape(line)}</text>'
+            for line_index, line in enumerate(lines)
+        )
         if index + 1 < len(STAGES):
             arrow_x = x + box_width
             middle = top + box_height / 2
             parts.append(
-                f'<path d="M{arrow_x + 3} {middle} H{arrow_x + gap - 6}" stroke="{INK}" '
+                f'<path class="ink-stroke" d="M{arrow_x + 3} {middle} H{arrow_x + gap - 6}" '
                 f'stroke-width="1"/>'
             )
             parts.append(
-                f'<path d="M{arrow_x + gap - 6} {middle - 3.5} L{arrow_x + gap - 1} {middle} '
-                f'L{arrow_x + gap - 6} {middle + 3.5} Z" fill="{INK}"/>'
+                f'<path class="ink" d="M{arrow_x + gap - 6} {middle - 3.5} '
+                f'L{arrow_x + gap - 1} {middle} L{arrow_x + gap - 6} {middle + 3.5} Z"/>'
             )
 
     width = left * 2 + len(STAGES) * box_width + (len(STAGES) - 1) * gap
     caption = (
-        f'<text x="{left}" y="{top + box_height + 22}" font-family="{SANS}" font-size="10" '
-        f'fill="{INK}">Every stage may refuse to conclude. What no stage explains is '
+        f'<text class="ink" x="{left}" y="{top + box_height + 22}" font-family="{SANS}" '
+        f'font-size="10">Every stage may refuse to conclude. What no stage explains is '
         f"reported as unexplained, not filled in.</text>"
     )
-    return _svg(width, top + box_height + 36, "\n".join(parts) + "\n" + caption + "\n", "pipeline")
+    return _svg(
+        width,
+        top + box_height + 36,
+        "\n".join(parts) + "\n" + caption + "\n",
+        "pipeline",
+        themed=True,
+    )
 
 
 def terminal(text: str, title: str) -> str:

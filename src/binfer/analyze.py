@@ -5,8 +5,7 @@ explained, resolve the overlaps between findings and hand the result to a
 renderer. Nothing here formats anything and nothing here decides a type.
 
 It lives outside ``report.py`` because that module renders and this one
-concludes, and outside ``cli.py`` because the command line is not allowed to
-carry analysis.
+concludes, and outside ``cli.py`` because the command line carries no analysis.
 
 Offsets follow the report's convention throughout: non-negative counts from the
 start of the file, negative counts back from the end, and an end of zero means

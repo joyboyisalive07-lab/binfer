@@ -137,12 +137,11 @@ and in the nested record table alike.
 
 - **It does not guess a record size.** Segmentation follows a count field whose
   arithmetic was proved exactly, or the `--record-size` you supply. A blind
-  search over plausible strides is a real technique, but no synthetic format
-  here would prove it works, and this project deletes heuristics that have no
-  ground truth rather than shipping them.
+  search over plausible strides is a real technique, but none of the synthetic
+  formats here would demonstrate that it works, so it is not shipped.
 - **It does not decompress anything.** A compressed or encrypted span is
-  reported as high-entropy and unexplained. That is the correct answer, not a
-  gap to be filled later.
+  reported as high-entropy and unexplained. That is the answer, not a gap to be
+  filled later.
 - **It does not follow pointers into nested structures.** A pointer that lands
   on a string is reported as a pointer; what the string means is your problem.
 - **It does not parse a single file.** Everything rests on comparing samples, so
