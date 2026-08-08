@@ -249,3 +249,25 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
   attributes, a record array becomes a repeated type, and a trailer anchored to
   the end of the file becomes an open-ended span with a note, since Kaitai
   cannot express it without a size expression the corpus does not supply.
+
+## Phase 7 - command line and self test
+
+- `--min-confidence` takes `low`, `high` and `proved`, not the `medium` the
+  original surface named. There is no medium tier; offering one would name a
+  thing the README does not define.
+- Exit codes are 0 for success, 1 for an analysis that could not run or a self
+  test that found a regression, and 2 for a usage error, which is argparse's
+  own convention.
+- `--self-test` grades each format mechanically and prints the tally. Whether a
+  compressed region is expected became a declared boolean on the format rather
+  than prose, so the check runs both ways: a format without a blob must not
+  report one either.
+- Colour is off unless stdout is a terminal, and `NO_COLOR` in the environment
+  turns it off regardless, following the usual convention.
+- Coverage is measured by `tools/coverage.py`, which drives the stdlib `trace`
+  module because the dev dependency list is fixed at pytest, ruff and
+  pyinstaller. It uses `trace._find_executable_linenos`, a private helper, on
+  the grounds that reimplementing it would add a second thing to be wrong.
+- `--min-confidence` filters the nested record table as well as the top level.
+  Filtering only the top level left hidden-tier rows visible inside the record
+  layout, which the CLI tests caught.

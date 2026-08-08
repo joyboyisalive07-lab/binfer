@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from binfer.model import CorpusSummary, Field, RecordLayout, Region, Relation, Report
+    from binfer.synth import Scorecard
 
 WIDTH = 100
 OFFSET_COLUMN = 9
@@ -205,6 +206,40 @@ def render_text(report: Report, *, colour: bool = False) -> str:
         _note_lines(report.notes),
     ]
     return "\n\n".join("\n".join(block) for block in blocks) + "\n"
+
+
+def _tally(pair: tuple[int, int]) -> str:
+    return "-" if pair[1] == 0 else f"{pair[0]}/{pair[1]}"
+
+
+def render_scorecard(cards: Sequence[Scorecard], *, colour: bool = False) -> str:
+    """Render the recovery scorecard printed by ``--self-test``."""
+    lines = [
+        "SELF TEST",
+        f"  binfer {__version__}, {len(cards)} synthetic formats with declared ground truth",
+        "",
+        "  KEY  FORMAT            FIELDS  RELATIONS  RECORDS  OPAQUE  RESULT",
+    ]
+    for card in cards:
+        verdict = "pass" if card.passed else "FAIL"
+        tinted = (
+            f"{_COLOURS[Confidence.PROVED]}{verdict}{_RESET}" if colour and card.passed else verdict
+        )
+        lines.append(
+            f"  {card.key.ljust(5)}{card.name.ljust(18)}"
+            f"{_tally(card.fields).ljust(8)}"
+            f"{_tally(card.relations).ljust(11)}"
+            f"{_tally(card.record_fields).ljust(9)}"
+            f"{('ok' if card.opaque_ok else 'no').ljust(8)}{tinted}"
+        )
+
+    failed = [card for card in cards if not card.passed]
+    lines.append("")
+    for card in failed:
+        for problem in card.problems:
+            lines.extend(_wrap(f"  {card.key}: {problem}", "     "))
+    lines.append(f"  {len(cards) - len(failed)} of {len(cards)} formats fully recovered")
+    return "\n".join(lines) + "\n"
 
 
 def _field_json(field: Field) -> dict[str, object]:

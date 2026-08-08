@@ -277,12 +277,29 @@ def analyze(corpus: Corpus, options: Options | None = None) -> Report:
     resolved = resolve_overlaps(fields)
 
     regions = _collect_regions(corpus, alignment, resolved, records)
-    shown = tuple(field for field in resolved if field.confidence >= settings.min_confidence)
+    tier = settings.min_confidence
+    shown = tuple(field for field in resolved if field.confidence >= tier)
     relations = tuple(
-        relation
-        for relation in relation_result.relations
-        if relation.confidence >= settings.min_confidence
+        relation for relation in relation_result.relations if relation.confidence >= tier
     )
+    hidden = len(resolved) - len(shown)
+
+    # The nested record table is part of the layout and has to obey the same
+    # threshold; filtering only the top level would show a hidden tier anyway.
+    filtered_records = []
+    for layout in records:
+        kept = tuple(field for field in layout.fields if field.confidence >= tier)
+        hidden += len(layout.fields) - len(kept)
+        filtered_records.append(
+            dataclasses.replace(
+                layout,
+                fields=kept,
+                relations=tuple(
+                    relation for relation in layout.relations if relation.confidence >= tier
+                ),
+            )
+        )
+    records = tuple(filtered_records)
 
     return Report(
         corpus=corpus.summary(),
@@ -290,13 +307,7 @@ def analyze(corpus: Corpus, options: Options | None = None) -> Report:
         relations=relations,
         regions=regions,
         records=records,
-        notes=_notes(
-            corpus,
-            alignment,
-            relation_result.notes,
-            regions,
-            len(resolved) - len(shown),
-        ),
+        notes=_notes(corpus, alignment, relation_result.notes, regions, hidden),
     )
 
 

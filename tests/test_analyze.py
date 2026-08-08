@@ -10,6 +10,7 @@ from binfer.analyze import Options, analyze
 from binfer.corpus import Corpus, Sample
 from binfer.model import Confidence, RegionKind
 from binfer.synth import FORMATS, build_corpus, format_by_key
+from binfer.types import TYPING_SCAN_LIMIT
 
 
 def report_for(key: str, **kwargs: object) -> object:
@@ -112,6 +113,22 @@ def test_regions_and_fields_never_overlap() -> None:
                 assert not (field.offset < end and region.start < field.end), (
                     f"{fmt.key}: field at {field.offset:#x} sits inside a region"
                 )
+
+
+def test_a_window_wider_than_the_scan_limit_says_the_scan_was_capped() -> None:
+    size = TYPING_SCAN_LIMIT + 512
+    samples = tuple(
+        Sample(f"big{index}.bin", b"WIDE" + bytes([index]) + bytes(size - 5)) for index in range(4)
+    )
+    report = analyze(Corpus(samples=samples, discovered=4))
+    assert any("numeric scan covered the first" in note for note in report.notes)
+
+
+def test_padding_is_reported_without_an_entropy_figure() -> None:
+    report = analyze(build_corpus(format_by_key("F")))
+    padding = next(region for region in report.regions if region.kind is RegionKind.PADDING)
+    assert padding.entropy == 0.0
+    assert padding.note == "zero filled in every sample"
 
 
 def test_the_whole_analysis_is_reproducible() -> None:

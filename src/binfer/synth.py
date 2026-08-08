@@ -22,12 +22,15 @@ import zlib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from binfer.analyze import analyze
 from binfer.corpus import Corpus, Sample
-from binfer.model import RelationKind
+from binfer.model import RegionKind, RelationKind
 from binfer.types import FILETIME_EPOCH_OFFSET, HUNDRED_NS_PER_SECOND, TICKS_EPOCH_OFFSET
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
+
+    from binfer.model import Field
 
 SAMPLES_PER_FORMAT = 24
 
@@ -95,6 +98,10 @@ class SyntheticFormat:
     record_size: int = 0
     record_fields: tuple[TruthField, ...] = ()
     opaque: tuple[str, ...] = field(default_factory=tuple)
+    # Whether a compressed span is present and must be refused rather than
+    # explained. The check runs both ways: a format without one must not report
+    # one either.
+    expects_blob: bool = False
 
 
 def _padded(data: bytes, size: int) -> bytes:
@@ -374,6 +381,7 @@ FORMATS: tuple[SyntheticFormat, ...] = (
             ),
         ),
         opaque=("0x10 to EOF is a deflate stream and must be reported as unexplained",),
+        expects_blob=True,
     ),
     SyntheticFormat(
         key="F",
@@ -431,3 +439,95 @@ def build_corpus(fmt: SyntheticFormat, count: int = SAMPLES_PER_FORMAT) -> Corpu
     blobs = generate(fmt, count)
     samples = tuple(Sample(f"{fmt.key}_{index:03d}.bin", data) for index, data in enumerate(blobs))
     return Corpus(samples=samples, discovered=len(samples))
+
+
+@dataclass(frozen=True, slots=True)
+class Scorecard:
+    """How much of one format's declared ground truth the analysis recovered."""
+
+    key: str
+    name: str
+    fields: tuple[int, int]
+    relations: tuple[int, int]
+    record_fields: tuple[int, int]
+    opaque_ok: bool
+    problems: tuple[str, ...] = ()
+
+    @property
+    def passed(self) -> bool:
+        """Return whether everything declared was recovered and nothing invented."""
+        return not self.problems
+
+
+def _score_fields(
+    declared: Sequence[TruthField],
+    found: Mapping[int, Field],
+    label: str,
+    problems: list[str],
+) -> int:
+    hits = 0
+    for truth in declared:
+        recovered = found.get(truth.offset)
+        if recovered is None:
+            problems.append(f"{label} {truth.offset:#06x} not found ({truth.role})")
+        elif recovered.type_name not in truth.accepted:
+            problems.append(f"{label} {truth.offset:#06x} read as {recovered.type_name}")
+        elif recovered.size != truth.size:
+            problems.append(f"{label} {truth.offset:#06x} sized {recovered.size}, not {truth.size}")
+        else:
+            hits += 1
+    return hits
+
+
+def score(fmt: SyntheticFormat) -> Scorecard:
+    """Run the analysis on one synthetic format and grade it against its schema."""
+    report = analyze(build_corpus(fmt))
+    problems: list[str] = []
+
+    fields = _score_fields(
+        fmt.fields, {item.offset: item for item in report.fields}, "field", problems
+    )
+
+    proved = {(relation.kind, relation.subject_offset) for relation in report.relations}
+    relations = 0
+    for truth in fmt.relations:
+        if (truth.kind, truth.subject_offset) in proved:
+            relations += 1
+        else:
+            problems.append(f"relation {truth.kind.value} at {truth.subject_offset} not proved")
+
+    record_fields = 0
+    if fmt.record_fields:
+        if report.records:
+            record_fields = _score_fields(
+                fmt.record_fields,
+                {item.offset: item for item in report.records[0].fields},
+                "record field",
+                problems,
+            )
+        else:
+            problems.append("no record array was segmented")
+
+    blobs = [region for region in report.regions if region.kind is RegionKind.HIGH_ENTROPY]
+    opaque_ok = bool(blobs) == fmt.expects_blob
+    if not opaque_ok:
+        problems.append(
+            "a compressed region was reported where none exists"
+            if blobs
+            else "the compressed region was explained instead of refused"
+        )
+
+    return Scorecard(
+        key=fmt.key,
+        name=fmt.name,
+        fields=(fields, len(fmt.fields)),
+        relations=(relations, len(fmt.relations)),
+        record_fields=(record_fields, len(fmt.record_fields)),
+        opaque_ok=opaque_ok,
+        problems=tuple(problems),
+    )
+
+
+def score_all() -> tuple[Scorecard, ...]:
+    """Grade every synthetic format."""
+    return tuple(score(fmt) for fmt in FORMATS)
