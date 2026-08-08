@@ -271,3 +271,20 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - `--min-confidence` filters the nested record table as well as the top level.
   Filtering only the top level left hidden-tier rows visible inside the record
   layout, which the CLI tests caught.
+
+## Phase 8 - the executable
+
+- PyInstaller is pointed at `src/binfer/__main__.py`, the same module
+  `python -m binfer` runs, so the frozen program and the source program take the
+  same path into the CLI and cannot drift apart.
+- `tools/build.ps1` refuses to call a build done until the executable has run
+  `--self-test` and recovered the ground truth of every synthetic format, and
+  until the version it reports matches the version in the source. A binary that
+  starts and prints a version number has proved nothing.
+- The bundle is stdlib only: 312 entries, 9.5 MB, with no third-party package
+  in it. PyInstaller's analysis prints a banner from an unrelated package
+  installed in this environment; nothing of it is bundled, and the build script
+  does not care what else is installed.
+- The spec file is generated rather than committed. It is derived entirely from
+  the command line above, and a checked-in copy would be a second place for the
+  build to be configured.
