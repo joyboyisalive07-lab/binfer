@@ -10,7 +10,18 @@ import pytest
 from binfer.analyze import analyze
 from binfer.corpus import Corpus, Sample
 from binfer.model import Confidence
-from binfer.report import WIDTH, position, render_json, render_ksy, render_text
+from binfer.report import (
+    OFFSET_COLUMN,
+    SIZE_COLUMN,
+    TYPE_COLUMN,
+    VALUE_COLUMN,
+    WIDTH,
+    _cell,
+    position,
+    render_json,
+    render_ksy,
+    render_text,
+)
 from binfer.synth import FORMATS, build_corpus, format_by_key
 
 SECTIONS = ("CORPUS", "LAYOUT", "RELATIONS", "REGIONS", "NOTES")
@@ -84,6 +95,40 @@ def test_the_record_table_is_nested_under_its_own_heading() -> None:
 
 def test_a_close_runner_up_is_shown_beside_the_winning_type() -> None:
     assert "enum16le / enum8" in text_for("A")
+
+
+def test_a_cell_always_leaves_a_separator_after_its_text() -> None:
+    for text in ("", "u32le", "u32le / enum16le", "u32le / enum16le / more"):
+        for width in (6, 12, 17):
+            rendered = _cell(text, width)
+            assert len(rendered) == width
+            assert rendered.endswith(" "), (text, width, rendered)
+
+
+@pytest.mark.parametrize("fmt", FORMATS, ids=lambda fmt: fmt.key)
+def test_no_field_row_lets_its_columns_run_together(fmt) -> None:  # noqa: ANN001
+    """A row that exactly fills a column used to print `enum16le72..75`.
+
+    Checking the line width cannot catch that: a run-together line is shorter
+    than a correct one, so it passed the width test with room to spare.
+    """
+    start = 2 + OFFSET_COLUMN + SIZE_COLUMN + 2  # indent, offset, size, gutter
+    rendered = render_text(analyze(build_corpus(fmt))).splitlines()
+    layout = rendered[rendered.index("LAYOUT") : rendered.index("RELATIONS")]
+    # A field row is the only line carrying a right-aligned size, which keeps
+    # the record heading and its evidence line out of the sample.
+    size_column = slice(2 + OFFSET_COLUMN, 2 + OFFSET_COLUMN + SIZE_COLUMN)
+    rows = [line for line in layout if line[size_column].strip().isdigit()]
+    assert rows
+    for row in rows:
+        type_cell = row[start : start + TYPE_COLUMN]
+        assert type_cell.endswith(" "), row
+        value_cell = row[start + TYPE_COLUMN : start + TYPE_COLUMN + VALUE_COLUMN]
+        assert value_cell.endswith(" "), row
+
+
+def test_the_widest_reading_still_fits_beside_its_value() -> None:
+    assert "u32le / enum16le 72..75" in text_for("D")
 
 
 def test_an_unexplained_region_says_so_plainly() -> None:
