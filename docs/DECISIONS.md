@@ -348,8 +348,9 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
   code-signing certificate, so the next best thing is a download that can be
   checked against a build log that is public.
-- The TLS stack is excluded from the bundle. binfer never opens a socket, but
-  `ssl`, `socket`, `email`, `http` and `urllib` were being unpacked into a
-  temporary directory at every start; dropping them takes the executable from
-  10.1 MB to 8.7 MB. `libcrypto` stays because `random.Random(str)` seeds
-  through `hashlib`.
+- Excluding the modules binfer does not import was tried and reverted. It took
+  the executable from 9.6 MB to 8.7 MB on Python 3.14 and broke it on 3.12,
+  where `pathlib` imports `urllib.parse` and the interpreter cannot start
+  without it. The build script caught it before publication, which is what that
+  gate is for. Nine hundred kilobytes are not worth an executable whose ability
+  to start depends on which interpreter built it.

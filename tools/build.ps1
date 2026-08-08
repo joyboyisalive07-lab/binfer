@@ -62,21 +62,23 @@ VSVersionInfo(
 "@
     Set-Content -Path 'version_info.txt' -Value $versionInfo -Encoding ascii
 
-    # binfer never opens a socket, so the TLS stack and the modules that drag it
-    # in have no business being unpacked into a temporary directory at every
-    # start. Dropping them removes about 7 MB of OpenSSL from the executable.
-    $excluded = @('ssl', 'socket', 'email', 'http', 'urllib', 'xml', 'unittest', 'pydoc', 'doctest')
-
+    # Nothing is excluded from the bundle. Trimming the modules binfer does not
+    # import looked worth about 1.4 MB, but on Python 3.12 pathlib imports
+    # urllib.parse and the interpreter would not start; 3.14 has no such import,
+    # so it passed locally and failed on the version releases are built with.
+    # A size saving that depends on the interpreter version is not worth the
+    # risk of shipping an executable that cannot start.
     Write-Host "building dist/binfer.exe for version $version"
-    $pyinstallerArgs = @(
-        '--onefile', '--console', '--name', 'binfer', '--paths', 'src',
-        '--noconfirm', '--clean', '--log-level', 'WARN',
-        '--version-file', 'version_info.txt'
-    )
-    foreach ($module in $excluded) {
-        $pyinstallerArgs += @('--exclude-module', $module)
-    }
-    python -m PyInstaller @pyinstallerArgs src/binfer/__main__.py
+    python -m PyInstaller `
+        --onefile `
+        --console `
+        --name binfer `
+        --paths src `
+        --noconfirm `
+        --clean `
+        --log-level WARN `
+        --version-file version_info.txt `
+        src/binfer/__main__.py
     if ($LASTEXITCODE -ne 0) {
         throw "pyinstaller failed with exit code $LASTEXITCODE"
     }
