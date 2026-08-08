@@ -270,7 +270,7 @@ FORMAT_G_SIZE = 40
 
 
 def _build_g(rng: random.Random, index: int) -> bytes:
-    return b"".join(
+    body = b"".join(
         (
             struct.pack("<4sh", FORMAT_G_MAGIC, rng.randrange(-1000, 1001)),
             struct.pack(">H", rng.randrange(0, 1001)),
@@ -281,6 +281,7 @@ def _build_g(rng: random.Random, index: int) -> bytes:
             struct.pack("<I", index * 65_537 + rng.randrange(1, 4096)),
         )
     )
+    return _padded(body, FORMAT_G_SIZE)
 
 
 FORMATS: tuple[SyntheticFormat, ...] = (

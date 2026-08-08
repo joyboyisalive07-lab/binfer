@@ -39,7 +39,7 @@ from binfer.stats import (
     entropy_ratio,
     mean_byte_entropy,
 )
-from binfer.types import MIN_MAGIC_RUN, MIN_PADDING_RUN, TYPING_SCAN_LIMIT, infer_fields
+from binfer.types import MIN_PADDING_RUN, TYPING_SCAN_LIMIT, infer_fields
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -339,11 +339,3 @@ def _collect_regions(
             for region in regions
         ]
     return _merge(regions)
-
-
-def region_covers_records(regions: Sequence[Region]) -> bool:
-    """Return whether any region was classified as compressed or encrypted."""
-    return any(region.kind is RegionKind.HIGH_ENTROPY for region in regions)
-
-
-MAGIC_RUN = MIN_MAGIC_RUN
