@@ -35,12 +35,12 @@ CORPUS
   sizes are not uniform, 24 distinct sizes
 
 LAYOUT
-  OFFSET    SIZE  TYPE            VALUE/RANGE       CONFIDENCE EVIDENCE
-  EOF-4        4  u32le           see checksum      proved     matches in 24/24
-  0x0000       4  magic[4]        'BLOB'            high       identical in 24/24
-  0x0004       4  const[4]        01 00 00 00       high       identical in 24/24
-  0x0008       4  u32le / u16le   125..502          high       top 2 byte(s) zero in 24/24
-  0x000C       4  u32le           547680..16515876  high       top 1 byte(s) zero in 24/24
+  OFFSET    SIZE  TYPE             VALUE/RANGE       CONFIDENCE EVIDENCE
+  EOF-4        4  u32le            see checksum      proved     matches in 24/24
+  0x0000       4  magic[4]         'BLOB'            high       identical in 24/24
+  0x0004       4  const[4]         01 00 00 00       high       identical in 24/24
+  0x0008       4  u32le / u16le    125..502          high       top 2 byte(s) zero in 24/24
+  0x000C       4  u32le            547680..16515876  high       top 1 byte(s) zero in 24/24
 
 RELATIONS
   EOF-4 u32le    checksum crc32 over the bytes before it       proved     matches in 24/24

@@ -309,3 +309,15 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - CI runs the self test as a separate step from pytest. The suite already covers
   it, but a release is cut from the executable and the same command has to be
   seen passing on both platforms.
+
+## 1.0.1 - a column that ate its own separator
+
+- Every padded column now reserves one space, because a value that exactly
+  filled its column ran into the next one and printed `enum16le72..75`. The
+  width tests all passed: they checked that no line exceeded a hundred columns,
+  which a run-together line does even better than a correct one. Found by
+  reading the output of the published executable on a real corpus, which is the
+  only check that would have caught it.
+- The type column is a byte wider and the evidence budget a byte narrower, so
+  `u32le / enum16le` still fits beside its value. The longest evidence string
+  the tool can emit is 36 characters and the layout now allows exactly that.

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 WIDTH = 100
 OFFSET_COLUMN = 9
 SIZE_COLUMN = 5
-TYPE_COLUMN = 16
+TYPE_COLUMN = 17
 VALUE_COLUMN = 18
 CONFIDENCE_COLUMN = 11
 SUBJECT_COLUMN = 15
@@ -59,21 +59,30 @@ def _clip(text: str, width: int) -> str:
     return text if len(text) <= width else text[: width - 1] + "~"
 
 
+def _cell(text: str, width: int) -> str:
+    """Fit text into a column, always leaving at least one space after it.
+
+    Without the reserved space a value that exactly fills its column runs into
+    the next one, and `enum16le` followed by `72..75` reads as `enum16le72..75`.
+    """
+    return _clip(text, width - 1).ljust(width)
+
+
 def _tier(confidence: Confidence, *, colour: bool) -> str:
     label = confidence.label.ljust(CONFIDENCE_COLUMN)
     return f"{_COLOURS[confidence]}{label}{_RESET}" if colour else label
 
 
 def _field_row(field: Field, prefix: str, *, colour: bool) -> str:
-    offset = (prefix + position(field.offset)).ljust(OFFSET_COLUMN)
+    offset = _cell(prefix + position(field.offset), OFFSET_COLUMN)
     # The runner-up rides in the type column so the evidence count, which the
     # report may never drop, keeps the whole line to the right of it.
     reading = f"{field.type_name} / {field.runner_up}" if field.runner_up else field.type_name
     return (
         f"  {offset}"
         f"{str(field.size).rjust(SIZE_COLUMN)}  "
-        f"{_clip(reading, TYPE_COLUMN).ljust(TYPE_COLUMN)}"
-        f"{_clip(field.value_repr, VALUE_COLUMN).ljust(VALUE_COLUMN)}"
+        f"{_cell(reading, TYPE_COLUMN)}"
+        f"{_cell(field.value_repr, VALUE_COLUMN)}"
         f"{_tier(field.confidence, colour=colour)}"
         f"{field.evidence.render()}"
     ).rstrip()
@@ -81,11 +90,11 @@ def _field_row(field: Field, prefix: str, *, colour: bool) -> str:
 
 def _table_header(prefix: str = "") -> str:
     return (
-        f"  {(prefix + 'OFFSET').ljust(OFFSET_COLUMN)}"
+        f"  {_cell(prefix + 'OFFSET', OFFSET_COLUMN)}"
         f"{'SIZE'.rjust(SIZE_COLUMN)}  "
-        f"{'TYPE'.ljust(TYPE_COLUMN)}"
-        f"{'VALUE/RANGE'.ljust(VALUE_COLUMN)}"
-        f"{'CONFIDENCE'.ljust(CONFIDENCE_COLUMN)}"
+        f"{_cell('TYPE', TYPE_COLUMN)}"
+        f"{_cell('VALUE/RANGE', VALUE_COLUMN)}"
+        f"{_cell('CONFIDENCE', CONFIDENCE_COLUMN)}"
         "EVIDENCE"
     )
 
@@ -144,9 +153,9 @@ def _relation_lines(relations: Sequence[Relation], *, colour: bool) -> list[str]
         lines.append("  none proved")
         return lines
     lines.extend(
-        f"  {_clip(relation.subject, SUBJECT_COLUMN).ljust(SUBJECT_COLUMN)}"
-        f"{relation.kind.value.ljust(KIND_COLUMN)}"
-        f"{_clip(relation.summary, SUMMARY_COLUMN).ljust(SUMMARY_COLUMN)}"
+        f"  {_cell(relation.subject, SUBJECT_COLUMN)}"
+        f"{_cell(relation.kind.value, KIND_COLUMN)}"
+        f"{_cell(relation.summary, SUMMARY_COLUMN)}"
         f"{_tier(relation.confidence, colour=colour)}"
         f"{relation.evidence.render()}"
         for relation in relations
@@ -162,9 +171,9 @@ def _region_lines(regions: Sequence[Region]) -> list[str]:
     for region in regions:
         entropy = f"{region.entropy:.2f} bits/byte" if region.kind is not RegionKind.PADDING else ""
         lines.append(
-            f"  {_span(region.start, region.end).ljust(SPAN_COLUMN)}"
-            f"{region.kind.value.ljust(REGION_KIND_COLUMN)}"
-            f"{entropy.ljust(ENTROPY_COLUMN)}{region.note}"
+            f"  {_cell(_span(region.start, region.end), SPAN_COLUMN)}"
+            f"{_cell(region.kind.value, REGION_KIND_COLUMN)}"
+            f"{_cell(entropy, ENTROPY_COLUMN)}{region.note}"
         )
     return lines
 
