@@ -98,15 +98,38 @@ VSVersionInfo(
 
     # Published beside the executable so a download can be checked without
     # trusting the transfer. It is not a signature, but it is verifiable.
+    #
+    # Written with an explicit newline: Set-Content ends a line with CRLF on
+    # Windows, and `sha256sum -c` then reads the carriage return as part of the
+    # file name and cannot find the file it was asked to check.
     $digest = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
-    Set-Content -Path (Join-Path $root "dist/$exeName.sha256") `
-        -Value "$digest *$exeName" -Encoding ascii
+    [System.IO.File]::WriteAllText(
+        (Join-Path $root "dist/$exeName.sha256"),
+        "$digest *$exeName`n",
+        (New-Object System.Text.UTF8Encoding($false))
+    )
     Write-Host "sha256 $digest"
 
     if ($SkipVerify) {
         Write-Host 'verification skipped'
         return
     }
+
+    # The README tells people to check this file with sha256sum, so it has to be
+    # in the format sha256sum reads: one LF-terminated line, no carriage return.
+    $sumPath = Join-Path $root "dist/$exeName.sha256"
+    $sumBytes = [System.IO.File]::ReadAllBytes($sumPath)
+    if ($sumBytes -contains 13) {
+        throw "$sumPath contains a carriage return, which sha256sum reads as part of the file name"
+    }
+    if ($sumBytes[-1] -ne 10) {
+        throw "$sumPath does not end with a newline"
+    }
+    $sumText = [System.Text.Encoding]::UTF8.GetString($sumBytes)
+    if ($sumText -notmatch "^[0-9a-f]{64} \*$([regex]::Escape($exeName))`n$") {
+        throw "$sumPath is not in the format sha256sum expects: $sumText"
+    }
+    Write-Host "checksum file verified"
 
     Write-Host 'verifying the executable against the synthetic ground truth'
     & $exe --self-test --no-color
