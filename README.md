@@ -82,36 +82,74 @@ says so rather than filling the table with plausible-looking rows.
 
 ## Install
 
-Download `binfer.exe` from the
-[latest release](https://github.com/joyboyisalive07-lab/binfer/releases/latest).
-It is a single file with no installer and no runtime dependencies, and it runs
-from any folder including a flash drive.
+| You are on | Take |
+| --- | --- |
+| Windows | `binfer.exe` from the [latest release](https://github.com/joyboyisalive07-lab/binfer/releases/latest) |
+| Linux | `binfer-linux-x86_64` from the same release, then `chmod +x` |
+| macOS, or anything with Python | the wheel, or install straight from a tag |
+| Android | Python under [Termux](https://termux.dev), then the wheel |
 
-Or from source, which needs only Python 3.12 or newer:
+The executables are single files with no installer and no runtime dependencies.
+They run from any folder, including a flash drive.
+
+Everywhere else, install with pip. This needs Python 3.12 or newer and works on
+any processor and operating system Python runs on:
+
+```bash
+python -m pip install https://github.com/joyboyisalive07-lab/binfer/archive/refs/tags/v1.0.5.tar.gz
+binfer --self-test
+```
+
+On Android, the same command works inside Termux:
+
+```bash
+pkg install python
+python -m pip install https://github.com/joyboyisalive07-lab/binfer/archive/refs/tags/v1.0.5.tar.gz
+python -m binfer --self-test
+```
+
+There is no phone build and there will not be one. An executable is compiled for
+one processor and one operating system, and Android and iOS run neither the
+Windows nor the Linux binary. The Python package is the portable form, and it is
+the same code.
+
+To work on it instead of just using it:
 
 ```bash
 git clone https://github.com/joyboyisalive07-lab/binfer
 cd binfer
-python -m pip install -e .
+python -m pip install -e ".[dev]"
 ```
 
 ### A note on Windows Defender and SmartScreen
 
-SmartScreen will warn about this download, and Defender occasionally quarantines
-it. That is expected and cannot be fixed from this side: a PyInstaller one-file
-executable unpacks a Python interpreter into a temporary directory and runs it,
-which some heuristics treat as suspicious, and the binary is unsigned because a
-code-signing certificate costs money this project does not have. A signature is
-the only thing that removes the warning, and there is no signature.
+SmartScreen will warn about `binfer.exe`, and Defender occasionally quarantines
+it. Two things cause it, and only one of them is fixable at all.
 
-What you can do instead:
+A PyInstaller one-file executable unpacks a Python interpreter into a temporary
+directory and runs it. Some heuristics treat that shape as suspicious no matter
+who built it.
 
-- Verify the download. Every release ships `binfer.exe.sha256`; compare it with
-  `Get-FileHash .\binfer.exe -Algorithm SHA256`. The executable is built by the
-  release workflow from the tagged commit, and the log is public.
-- To run it anyway: **More info** in the SmartScreen dialog, then **Run anyway**.
-- Or skip the executable entirely and run from source with `python -m binfer`.
-  It does exactly the same work.
+The binary is also unsigned. **A code-signing certificate is the only thing that
+removes the warning**, and there is no free one: a certificate from a
+certificate authority costs a few hundred dollars a year, and a self-signed
+certificate makes matters worse, because Windows then reports an untrusted
+publisher rather than an unknown one. Free signing does exist for open-source
+projects through [SignPath](https://about.signpath.io/product/open-source) and
+cheaply through Azure Trusted Signing, but both want an established project with
+a history, so neither is available to this one yet.
+
+Until then:
+
+- **Verify what you downloaded.** Every release ships a `.sha256` beside each
+  binary. Compare with `Get-FileHash .\binfer.exe -Algorithm SHA256`. The
+  binaries are built by the release workflow from the tagged commit and the
+  build log is public, so you can check that the file you hold came from the
+  source you can read.
+- **To run it anyway:** click **More info** in the SmartScreen dialog, then
+  **Run anyway**.
+- **Or avoid the question entirely** and install with pip, as above. Nothing
+  warns about that, and it is the same code.
 
 ### Running it
 

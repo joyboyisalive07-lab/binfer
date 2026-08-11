@@ -348,6 +348,28 @@ Every non-obvious choice, one line each, with the reason. Newest phase last.
 - Releases ship `binfer.exe.sha256`. The warning cannot be removed without a
   code-signing certificate, so the next best thing is a download that can be
   checked against a build log that is public.
+## 1.0.5 - reaching machines that cannot run an executable
+
+- A phone runs neither the Windows nor the Linux binary, and no build would fix
+  that: an executable is compiled for one processor and one operating system.
+  The portable form is the Python package, so releases now carry a wheel and the
+  README documents installing straight from a tag, which works under Termux on
+  Android and anywhere else Python runs. Verified by installing the v1.0.4 tag
+  tarball into a clean environment and running the self test from it.
+- The wheel is built by `pip wheel`, so the release needs no packaging library
+  beyond the three dependencies the project already declares.
+- A Linux executable is built and published alongside the Windows one. The build
+  script now names its output per platform and only writes a version resource on
+  Windows, where the concept exists.
+- The release job that publishes is separate from the jobs that build, so a
+  release appears only once every platform has produced a verified binary.
+- On signing: nothing free removes the SmartScreen warning. A certificate
+  authority charges a few hundred a year, and a self-signed certificate makes it
+  worse by reporting an untrusted publisher rather than an unknown one. SignPath
+  and Azure Trusted Signing do sign open source cheaply or free, but both expect
+  a project with a history. The README says all of this plainly instead of
+  implying the warning is somebody's mistake.
+
 ## 1.0.4 - something to point option 2 at
 
 - The menu offered to analyse a folder to someone who, having just downloaded a

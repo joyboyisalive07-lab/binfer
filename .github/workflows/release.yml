@@ -8,9 +8,19 @@ permissions:
   contents: write
 
 jobs:
-  windows-executable:
-    name: Build and publish binfer.exe
-    runs-on: windows-latest
+  executables:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            label: binfer.exe
+            artefact: windows
+          - os: ubuntu-latest
+            label: binfer (linux)
+            artefact: linux
 
     steps:
       - uses: actions/checkout@v4
@@ -30,12 +40,62 @@ jobs:
       - name: Build and verify
         run: pwsh tools/build.ps1
 
+      - name: Name the Linux build for its platform
+        if: matrix.artefact == 'linux'
+        run: |
+          mv dist/binfer dist/binfer-linux-x86_64
+          sed 's/ \*binfer$/ *binfer-linux-x86_64/' dist/binfer.sha256 > dist/binfer-linux-x86_64.sha256
+          rm dist/binfer.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artefact }}
+          path: |
+            dist/binfer.exe
+            dist/binfer.exe.sha256
+            dist/binfer-linux-x86_64
+            dist/binfer-linux-x86_64.sha256
+          if-no-files-found: error
+
+  wheel:
+    name: Build the wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # pip builds the wheel on its own, so the release needs no packaging
+      # dependency beyond the three the project already declares.
+      - name: Build
+        run: |
+          python -m pip wheel --no-deps --wheel-dir wheelhouse .
+          python -m pip install --force-reinstall wheelhouse/*.whl
+          python -m binfer --self-test --no-color
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: [executables, wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
       # gh ships on the runner and authenticates with the default token, so the
       # release needs no third-party action and no secret.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "$env:GITHUB_REF_NAME"
-          dist/binfer.exe dist/binfer.exe.sha256
-          --generate-notes
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --repo "$REPO" assets/* --generate-notes

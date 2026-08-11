@@ -47,3 +47,32 @@ jobs:
         run: |
           python tools/make_images.py
           git diff --exit-code docs/img
+
+  # The build script used to be exercised only when a tag was pushed, so a
+  # mistake in it surfaced as a failed release. It runs on every push now.
+  package:
+    name: Package on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Executable
+        run: pwsh tools/build.ps1
+
+      - name: Wheel
+        run: |
+          python -m pip wheel --no-deps --wheel-dir wheelhouse .
+          python -m pip install --force-reinstall wheelhouse/binfer-*.whl
+          python -m binfer --self-test --no-color
