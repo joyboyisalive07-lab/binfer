@@ -31,6 +31,10 @@ one.
 binfer is a command-line tool, so it prints a report and exits. It writes
 nothing anywhere unless you pass `--json` or `--ksy`.
 
+Not on Windows? There is a Linux binary in the same release, and on macOS,
+Android or anything else with Python, one pip command gets you the same tool.
+See [Install](#install).
+
 ## The problem
 
 You have thirty save files from a game, or thirty exports from a program whose
